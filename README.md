@@ -7,5 +7,5 @@ web applications.
 It provides an interactive map browser for the Slippy Map, i.e. the tiled
 map rendered and served by the [Open Street Map](http://www.osm.org) project.
 
-See it [in action](https://gubaer.github.com/dart-mapbrowser/).
+See it [in action](http://gubaer.github.com/dart-mapbrowser/).
 
