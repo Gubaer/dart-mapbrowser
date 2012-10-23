@@ -1,0 +1,6 @@
+name: mapbrowser
+description: A browser for tiled maps, i.e. Open Street Map map tiles 
+
+dependencies:
+  unittest:
+    sdk: unittest
