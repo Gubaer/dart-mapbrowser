@@ -19,6 +19,12 @@ class Tile {
   
   Tile(int this.zoom, int this.ti, int this.tj, TileSource this.source){}
   
+  /// the parent tile or null, if this [Tile] is already the root tile
+  Tile get parent {
+    if (zoom == 0) return null;
+    return new Tile(zoom -1, ti ~/ 2, tj ~/ 2, source);
+  }
+  
   /// attaches the graphics [context] the tile is rendered to. Renders itself
   /// at the position ([x],[y]).
   attach(context,int x, int y) {
@@ -88,8 +94,25 @@ class Tile {
   }
   
   _renderLoading() {
-     this._context.setFillColorRgb(255, 255, 255, 255); // white
-     this._context.fillRect(_x, _y, source.tileWidth, source.tileHeight);
+     var p = parent;
+     var pimage = null;
+     if (p != null){
+       pimage = ImageCache.instance.lookup(p.url);
+     }
+     if (pimage == null) {       
+       this._context.setFillColorRgb(255, 255, 255, 255); // white
+       this._context.fillRect(_x, _y, source.tileWidth, source.tileHeight);
+     } else {
+       var tw = source.tileWidth ~/ 2;
+       var th = source.tileHeight ~/ 2;
+       var tx = 0, ty = 0;
+       if (ti % 2 == 1) tx = tw;
+       if (tj % 2 == 1) ty = th;
+       this._context.drawImage(pimage, 
+         /* take section from parent image .. */ tx, ty,tw,th, 
+         /* ... and draw onto tile space      */ _x, _y, source.tileWidth, source.tileHeight
+       );
+     }
   }
   
   _renderReady() {
