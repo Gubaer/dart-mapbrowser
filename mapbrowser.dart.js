@@ -818,21 +818,17 @@ $$.MapView = {"":
  ["_canvas", "_context?", "_zoom", "_center", "_tilesource", "dragging", "dragStart", "dragCenter", "tiles"],
  "super": "Object",
  onMouseDown$1: function(event$) {
-  $.print('mouse down ...');
   this.dragStart = $.MyPoint$($.sub(event$.get$pageX(), this._canvas.get$offsetLeft()), $.sub(event$.get$pageY(), this._canvas.get$offsetTop()));
   this.dragCenter = $.LatLon$clone(this._center);
 },
  onMouseUp$1: function(event$) {
-  $.print('mouse up ...');
   this.dragStart = null;
 },
  onMouseMove$1: function(event$) {
-  $.print('moving mouse ... dragStart is ' + $.S(this.dragStart));
   if (this.dragStart == null)
     return;
   var x = $.sub(event$.get$pageX(), this._canvas.get$offsetLeft());
   var y = $.sub(event$.get$pageY(), this._canvas.get$offsetTop());
-  $.print('moving mouse: ' + $.S(x) + ', ' + $.S(y));
   var tc = this.tileCoordinates$3(this.dragCenter.get$lat(), this.dragCenter.get$lon(), this._zoom);
   var tx = $.sub(tc.tilePlaneX$0(), $.sub(x, $.toInt(this.dragStart.get$x())));
   var ty = $.sub(tc.tilePlaneY$0(), $.sub(y, $.toInt(this.dragStart.get$y())));
@@ -1164,6 +1160,12 @@ $$.TileSource = {"":
 $$.Tile = {"":
  ["zoom", "ti?", "tj?", "source", "_image", "_context?", "_state", "_x", "_y"],
  "super": "Object",
+ get$parent: function() {
+  var t1 = this.zoom;
+  if ($.eqB(t1, 0))
+    return;
+  return $.Tile$($.sub(t1, 1), $.tdiv(this.ti, 2), $.tdiv(this.tj, 2), this.source);
+},
  attach$3: function(context, x, y) {
   this._context = context;
   this._x = x;
@@ -1232,12 +1234,20 @@ $$.Tile = {"":
   }
 },
  _renderLoading$0: function() {
-  this._context.setFillColorRgb$4(255, 255, 255, 255);
-  var t1 = this._context;
-  var t2 = this._x;
-  var t3 = this._y;
-  var t4 = this.source;
-  t1.fillRect$4(t2, t3, t4.get$tileWidth(), t4.get$tileHeight());
+  var p = this.get$parent();
+  var pimage = !(p == null) ? $.ImageCache_instance().lookup$1(p.get$url()) : null;
+  var t1 = pimage == null;
+  var t2 = this.source;
+  if (t1) {
+    this._context.setFillColorRgb$4(255, 255, 255, 255);
+    this._context.fillRect$4(this._x, this._y, t2.get$tileWidth(), t2.get$tileHeight());
+  } else {
+    var tw = $.tdiv(t2.get$tileWidth(), 2);
+    var th = $.tdiv(t2.get$tileHeight(), 2);
+    var tx = $.eqB($.mod(this.ti, 2), 1) ? tw : 0;
+    var ty = $.eqB($.mod(this.tj, 2), 1) ? th : 0;
+    this._context.drawImage$9(pimage, tx, ty, tw, th, this._x, this._y, t2.get$tileWidth(), t2.get$tileHeight());
+  }
 },
  _renderReady$0: function() {
   this._context.drawImage$3(this._image, this._x, this._y);
@@ -2747,6 +2757,12 @@ $.max = function(a, b) {
   throw $.$$throw($.ArgumentError$(a));
 };
 
+$.tdiv = function(a, b) {
+  if ($.checkNumbers(a, b))
+    return $.truncate(a / b);
+  return a.operator$tdiv$1(b);
+};
+
 $.Primitives_printString = function(string) {
   if (typeof dartPrint == "function") {
     dartPrint(string);
@@ -2762,12 +2778,6 @@ $.Primitives_printString = function(string) {
     return;
   }
   throw 'Unable to print message: ' + String(string);
-};
-
-$.tdiv = function(a, b) {
-  if ($.checkNumbers(a, b))
-    return $.truncate(a / b);
-  return a.operator$tdiv$1(b);
 };
 
 $.JSSyntaxRegExp$ = function(pattern, ignoreCase, multiLine) {
@@ -4065,8 +4075,8 @@ $.defineProperty = function(obj, property, value) {
       {value: value, enumerable: false, writable: true, configurable: true});
 };
 
-$.print = function(object) {
-  $.Primitives_printString(object);
+$.tan = function(x) {
+  return Math.tan($.checkNum(x));
 };
 
 $.checkString = function(value) {
@@ -4081,8 +4091,12 @@ $.div = function(a, b) {
   return typeof a === 'number' && typeof b === 'number' ? a / b : $.div$slow(a, b);
 };
 
-$.tan = function(x) {
-  return Math.tan($.checkNum(x));
+$.print = function(object) {
+  $.Primitives_printString(object);
+};
+
+$.MetaInfo$ = function(_tag, _tags, _set) {
+  return new $.MetaInfo(_tag, _tags, _set);
 };
 
 $.dynamicFunction = function(name$) {
@@ -4097,10 +4111,6 @@ $.dynamicFunction = function(name$) {
   bind.methods = methods;
   $.defineProperty(Object.prototype, name$, bind);
   return methods;
-};
-
-$.MetaInfo$ = function(_tag, _tags, _set) {
-  return new $.MetaInfo(_tag, _tags, _set);
 };
 
 $.DateImplementation$fromMillisecondsSinceEpoch = function(millisecondsSinceEpoch, isUtc) {
@@ -4393,16 +4403,16 @@ $.NoSuchMethodError$ = function(_receiver, _functionName, _arguments, existingAr
   return new $.NoSuchMethodError(_receiver, _functionName, _arguments, existingArgumentNames);
 };
 
-$._IDBVersionChangeRequestEventsImpl$ = function(_ptr) {
-  return new $._IDBVersionChangeRequestEventsImpl(_ptr);
-};
-
 $._SharedWorkerContextEventsImpl$ = function(_ptr) {
   return new $._SharedWorkerContextEventsImpl(_ptr);
 };
 
 $.gtB = function(a, b) {
   return typeof a === 'number' && typeof b === 'number' ? a > b : $.gt$slow(a, b) === true;
+};
+
+$._IDBVersionChangeRequestEventsImpl$ = function(_ptr) {
+  return new $._IDBVersionChangeRequestEventsImpl(_ptr);
 };
 
 $.shl = function(a, b) {
@@ -5111,6 +5121,9 @@ $.$defineNativeClass('BatteryManager', [], {
 }
 });
 
+$.$defineNativeClass('BeforeLoadEvent', ["url?"], {
+});
+
 $.$defineNativeClass('Blob', [], {
  is$_BlobImpl: function() { return true; },
  is$Blob: function() { return true; }
@@ -5663,7 +5676,7 @@ $.$defineNativeClass('EventException', [], {
 }
 });
 
-$.$defineNativeClass('EventSource', [], {
+$.$defineNativeClass('EventSource', ["url?"], {
  get$on: function() {
   return $._EventSourceEventsImpl$(this);
 },
@@ -7303,6 +7316,9 @@ $.$defineNativeClass('Screen', ["height?", "width?"], {
 $.$defineNativeClass('HTMLScriptElement', ["src!"], {
 });
 
+$.$defineNativeClass('ScriptProfileNode', ["url?"], {
+});
+
 $.$defineNativeClass('HTMLSelectElement', ["length=", "value="], {
 });
 
@@ -7495,7 +7511,7 @@ return this[index];
  is$Collection: function() { return true; }
 });
 
-$.$defineNativeClass('StorageEvent', ["key?"], {
+$.$defineNativeClass('StorageEvent', ["key?", "url?"], {
 });
 
 $.$defineNativeClass('Storage', [], {
@@ -7949,7 +7965,7 @@ $.$defineNativeClass('WebKitNamedFlow', [], {
 }
 });
 
-$.$defineNativeClass('WebSocket', [], {
+$.$defineNativeClass('WebSocket', ["url?"], {
  get$on: function() {
   return $._WebSocketEventsImpl$(this);
 },
@@ -8029,8 +8045,8 @@ $.$defineNativeClass('XPathException', [], {
 }
 });
 
-// 229 dynamic classes.
-// 343 classes
+// 231 dynamic classes.
+// 345 classes
 // 31 !leaf
 (function(){
   var v0/*class(_Uint8ArrayImpl)*/ = 'Uint8Array|Uint8ClampedArray|Uint8ClampedArray';
