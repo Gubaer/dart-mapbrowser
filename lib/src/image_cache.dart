@@ -5,13 +5,15 @@ part of mapbrowser;
 
 class ImageCacheEntry {
   var image;
-  var _ts;
-  ImageCacheEntry(this.image, [ts]){
-    if (!?ts) ts = new Date.now().millisecondsSinceEpoch;
-    this._ts = ts;
+  int _ts;
+  ImageCacheEntry(this.image, [timestamp]){
+    if (?timestamp) timestamp = new Date.now().millisecondsSinceEpoch;
+    this._ts = timestamp;
   }
   
-  set ts(value) => this._ts = value;
+  set ts(int value) {
+    this._ts = value;
+  }
   int get ts => _ts;
 }
 
@@ -52,18 +54,11 @@ class ImageCache {
   shrink([by=10]) {
     assert(by is num && by > 0);
 
-    print("ImageCache: shrinking by $by");
-
     var l = [];
     _cache.forEach((url, entry) {
       l.add({"url": url, "ts": entry.ts});
     });
-    l.sort((a,b) {
-      //FIXME: compareTo doesn't work in M1 on int? 
-      if (a["ts"] > b["ts"]) return -1;
-      if (a["ts"] == b["ts"]) return 0;
-      return 1;
-    });
+    l.sort((a,b) => a["ts"].compareTo(b["ts"]));
     for (var i = 0; i < by && i < l.length - 1; i++) {
       _cache.remove(l[i]["url"]);
     }
