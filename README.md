@@ -1,6 +1,6 @@
 # Dart Map Browser
 
-Dart Map Browser is a small demo application written 
+Dart Map Browser is a small demo application written in
 [Dart](http://www.dartlang.com), Googles new programming language for
 web applications.
 
