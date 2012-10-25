@@ -90,6 +90,13 @@ class MapView {
     render();
   }
   
+  get tilesource => _tilesource;
+  set tilesource(source) {
+    assert(source != null && source is TileSource);
+    this._tilesource = source;
+    render();
+  }
+  
   /// the with of the tile plane in pixels
   int get tilePlaneWidth => (1 << _zoom) * _tilesource.tileWidth; 
   /// the height of the tile plane in pixels

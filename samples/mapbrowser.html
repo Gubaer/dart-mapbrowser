@@ -25,6 +25,13 @@
     <section>    
       <p class="description">An interactive map browser for tiled maps, implemented in Googles new programming
       language <a href="http://www.dartlang.org">Dart</a>.</p>
+      <p>Select a tile source:
+      <select id="tile-sources">
+        <option value="http://a.tile.openstreetmap.org/$zoom/$x/$y.png" selected>OSM Slippy Map</option> 
+        <option value="http://a.tile.opencyclemap.org/cycle/$zoom/$x/$y.png">Open Cyclemap</option>
+        <option value="http://otile1.mqcdn.com/tiles/1.0.0/osm/$zoom/$x/$y.jpg">Mapquest</option>
+      </select>      
+      </p>
       <p class="actions"><span class="action">Zoom in</span>: double click or mouse wheel; 
       <span class="action">Zoom out</span>: mouse wheel; 
       <span class="action">Repositioning</span>: right click and drag
