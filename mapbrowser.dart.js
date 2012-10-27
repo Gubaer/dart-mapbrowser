@@ -1154,7 +1154,7 @@ $$.MetaInfo = {"":
 };
 
 $$.MapView = {"":
- ["_layer0?", "_layer1", "_zoom", "_center!", "_tilesource", "_panNavigator", "_lastMouseDownTimestamp", "_lastMouseDownPos", "_mouseDown", "_isDragging", "_dragStart", "_dragCenter", "deferredEvent", "tiles"],
+ ["_layer0?", "_layer1", "_zoom", "_center!", "_tilesource", "_panNavigator", "_zoomSlider", "_lastMouseDownTimestamp", "_lastMouseDownPos", "_mouseDown", "_isDragging", "_dragStart", "_dragCenter", "deferredEvent", "tiles"],
  "super": "Object",
  _rawMouseDown$1: function(event$) {
   this._mouseDown = true;
@@ -1187,10 +1187,8 @@ $$.MapView = {"":
 },
  _rawMouseClick$1: function(event$) {
   if (this.deferredEvent == null) {
-    if ($.gtB($.sub($.Date_Date$now().get$millisecondsSinceEpoch(), this._lastMouseDownTimestamp), 200)) {
-      $.print('ignoring click ...');
+    if ($.gtB($.sub($.Date_Date$now().get$millisecondsSinceEpoch(), this._lastMouseDownTimestamp), 200))
       return;
-    }
     this.deferredEvent = event$;
     $.window().setTimeout$2(new $.MapView__rawMouseClick_anon(this), 200);
   } else {
@@ -1203,6 +1201,7 @@ $$.MapView = {"":
 },
  onClick$1: function(event$) {
   this._panNavigator.onClick$1(event$);
+  this._zoomSlider.onClick$1(event$);
 },
  onDragStart$1: function(event$) {
   this._dragStart = this.layerXY$1(event$);
@@ -1230,6 +1229,7 @@ $$.MapView = {"":
 },
  onMove$1: function(event$) {
   this._panNavigator.onMouseMove$1(event$);
+  this._zoomSlider.onMouseMove$1(event$);
 },
  onMouseWheel$1: function(event$) {
   if ($.gtB($.indexOf$1($.toLowerCase($.window().get$navigator().get$userAgent()), 'firefox'), -1))
@@ -1615,11 +1615,140 @@ $$.MapView = {"":
   this.render$0();
   this._panNavigator = $.PanNavigator$(this, 40, 40);
   this._panNavigator.render$0();
+  this._zoomSlider = $.ZoomSlider$(this);
+  this._zoomSlider.render$0();
+}
+};
+
+$$.Rectangle = {"":
+ ["x?", "y?", "width=", "height=", "mouseOver"],
+ "super": "Object",
+ render$1: function(ctx) {
+  ctx.beginPath$0();
+  var t1 = this.x;
+  var t2 = this.y;
+  ctx.moveTo$2(t1, t2);
+  ctx.lineTo$2($.add(t1, this.width), t2);
+  ctx.lineTo$2($.add(t1, this.width), $.add(t2, this.height));
+  ctx.lineTo$2(t1, $.add(t2, this.height));
+  ctx.closePath$0();
+  ctx.stroke$0();
+  ctx.fill$0();
+},
+ translate$2: function(dx, dy) {
+  return $.Rectangle$($.add(this.x, dx), $.add(this.y, dy), this.width, this.height);
+},
+ renderPlus$1: function(ctx) {
+  ctx.set$strokeStyle('rgb(100,100,100)');
+  ctx.set$lineWidth(3);
+  ctx.set$lineCap('round');
+  ctx.beginPath$0();
+  var t1 = this.x;
+  var t2 = $.add(t1, 5);
+  var t3 = this.y;
+  ctx.moveTo$2(t2, $.add(t3, 10));
+  ctx.lineTo$2($.add(t1, 15), $.add(t3, 10));
+  ctx.stroke$0();
+  ctx.beginPath$0();
+  ctx.moveTo$2($.add(t1, 10), $.add(t3, 5));
+  ctx.lineTo$2($.add(t1, 10), $.add(t3, 15));
+  ctx.stroke$0();
+},
+ renderMinus$1: function(ctx) {
+  ctx.set$strokeStyle('rgb(100,100,100)');
+  ctx.set$lineWidth(3);
+  ctx.set$lineCap('round');
+  ctx.beginPath$0();
+  var t1 = this.x;
+  var t2 = $.add(t1, 5);
+  var t3 = this.y;
+  ctx.moveTo$2(t2, $.add(t3, 10));
+  ctx.lineTo$2($.add(t1, 15), $.add(t3, 10));
+  ctx.stroke$0();
+},
+ isInside$2: function(x, y) {
+  var t1 = this.x;
+  if ($.geB(x, t1))
+    if ($.ltB(x, $.add(t1, this.width))) {
+      t1 = this.y;
+      t1 = $.geB(y, t1) && $.ltB(y, $.add(t1, this.height));
+    } else
+      t1 = false;
+  else
+    t1 = false;
+  return t1;
+},
+ onMouseMove$2: function(p, setCursor) {
+  var t1 = this.isInside$2(p.get$x(), p.get$y()) === true;
+  if (t1 && !this.mouseOver) {
+    setCursor.call$1('pointer');
+    this.mouseOver = true;
+  } else if (!t1 && this.mouseOver) {
+    setCursor.call$1('default');
+    this.mouseOver = false;
+  }
+},
+ get$center: function() {
+  return $.MyPoint$($.add(this.x, $.tdiv(this.width, 2)), $.add(this.y, $.tdiv(this.height, 2)));
+}
+};
+
+$$.ZoomSlider = {"":
+ ["_lib1_parent?", "plus", "minus"],
+ "super": "Object",
+ _renderZoomNob$2: function(ctx, r) {
+  var shadow = r.translate$2(3, 3);
+  ctx.setFillColorRgb$3(120, 120, 120);
+  ctx.set$lineWidth(0);
+  shadow.render$1(ctx);
+  ctx.setFillColorRgb$3(255, 255, 255);
+  ctx.set$lineWidth(1);
+  ctx.set$strokeStyle('rgb(50,50,50)');
+  ctx.set$lineWidth(1);
+  r.render$1(ctx);
+},
+ _renderZoomSlider$1: function(ctx) {
+  var c1 = this.plus.get$center();
+  var c2 = this.minus.get$center();
+  ctx.beginPath$0();
+  ctx.moveTo$2(c1.get$x(), c1.get$y());
+  ctx.lineTo$2(c2.get$x(), c2.get$y());
+  ctx.set$strokeStyle('rgba(150,150,150, 0.7)');
+  ctx.set$lineWidth(5);
+  ctx.stroke$0();
+},
+ render$0: function() {
+  var ctx = this._lib1_parent.get$layer1().get$context2d();
+  ctx.save$0();
+  this._renderZoomSlider$1(ctx);
+  this._renderZoomNob$2(ctx, this.plus);
+  this.plus.renderPlus$1(ctx);
+  this._renderZoomNob$2(ctx, this.minus);
+  this.minus.renderMinus$1(ctx);
+  ctx.restore$0();
+},
+ onMouseMove$1: function(event$) {
+  var t1 = new $.ZoomSlider_onMouseMove_setCursor(this);
+  var p = this._lib1_parent.layerXY$1(event$);
+  this.plus.onMouseMove$2(p, t1);
+  this.minus.onMouseMove$2(p, t1);
+},
+ onClick$1: function(event$) {
+  var t1 = this._lib1_parent;
+  var p = t1.layerXY$1(event$);
+  if (this.plus.isInside$2(p.get$x(), p.get$y()) === true)
+    t1.zoomIn$0();
+  else if (this.minus.isInside$2(p.get$x(), p.get$y()) === true)
+    t1.zoomOut$0();
+},
+ ZoomSlider$1: function(_parent) {
+  this.plus = $.Rectangle$(30, 90, 20, 20);
+  this.minus = this.plus.translate$2(0, 200);
 }
 };
 
 $$.PanNavigator = {"":
- ["_x", "_y", "_lib1_parent", "_mouseOver"],
+ ["_x", "_y", "_lib1_parent?", "_mouseOver"],
  "super": "Object",
  render$0: function() {
   var ctx = this._lib1_parent.get$layer1().get$context2d();
@@ -4397,6 +4526,15 @@ $$.MapView__panMoveTo_makeRenderer_anon = {"":
 }
 };
 
+$$.ZoomSlider_onMouseMove_setCursor = {"":
+ ["this_0"],
+ "super": "Closure",
+ call$1: function(name$) {
+  this.this_0.get$_lib1_parent().get$layer1().get$style().set$cursor(name$);
+  return name$;
+}
+};
+
 $$._CssClassSet_clear_anon = {"":
  [],
  "super": "Closure",
@@ -4814,23 +4952,6 @@ $.tdiv = function(a, b) {
   return a.operator$tdiv$1(b);
 };
 
-$.Primitives_printString = function(string) {
-  if (typeof dartPrint == "function") {
-    dartPrint(string);
-    return;
-  }
-  if (typeof window == "object") {
-    if (typeof console == "object")
-      console.log(string);
-    return;
-  }
-  if (typeof print == "function") {
-    print(string);
-    return;
-  }
-  throw 'Unable to print message: ' + String(string);
-};
-
 $.JSSyntaxRegExp$ = function(pattern, ignoreCase, multiLine) {
   return new $.JSSyntaxRegExp(pattern, multiLine, ignoreCase);
 };
@@ -4906,6 +5027,10 @@ $.ExceptionImplementation$ = function(message) {
   return new $.ExceptionImplementation(message);
 };
 
+$.Rectangle$ = function(x, y, width, height) {
+  return new $.Rectangle(x, y, width, height, false);
+};
+
 $.stringJoinUnchecked = function(array, separator) {
   return array.join(separator);
 };
@@ -4969,6 +5094,16 @@ $._Collections_filter = function(source, destination, f) {
       destination.push(t2);
   }
   return destination;
+};
+
+$.removeLast = function(receiver) {
+  if ($.isJsArray(receiver)) {
+    $.checkGrowable(receiver, 'removeLast');
+    if ($.get$length(receiver) === 0)
+      throw $.$$throw($.IndexOutOfRangeException$(-1));
+    return receiver.pop();
+  }
+  return receiver.removeLast$0();
 };
 
 $._NotificationEventsImpl$ = function(_ptr) {
@@ -5040,12 +5175,6 @@ $._DocumentEventsImpl$ = function(_ptr) {
   return new $._DocumentEventsImpl(_ptr);
 };
 
-$.DoubleLinkedQueueEntry$ = function(e) {
-  var t1 = new $.DoubleLinkedQueueEntry(null, null, null);
-  t1.DoubleLinkedQueueEntry$1(e);
-  return t1;
-};
-
 $.regExpTest = function(regExp, str) {
   return $.regExpGetNative(regExp).test(str);
 };
@@ -5063,6 +5192,12 @@ $.typeNameInOpera = function(obj) {
   if (name$ === 'Window')
     return 'DOMWindow';
   return name$;
+};
+
+$.DoubleLinkedQueueEntry$ = function(e) {
+  var t1 = new $.DoubleLinkedQueueEntry(null, null, null);
+  t1.DoubleLinkedQueueEntry$1(e);
+  return t1;
 };
 
 $.callTypeCast = function(value, property) {
@@ -5103,16 +5238,6 @@ $.Futures_wait = function(futures) {
     future.handleException$1(new $.Futures_wait_anon0(result, completer, future));
   }
   return result;
-};
-
-$.removeLast = function(receiver) {
-  if ($.isJsArray(receiver)) {
-    $.checkGrowable(receiver, 'removeLast');
-    if ($.get$length(receiver) === 0)
-      throw $.$$throw($.IndexOutOfRangeException$(-1));
-    return receiver.pop();
-  }
-  return receiver.removeLast$0();
 };
 
 $.add$1 = function(receiver, value) {
@@ -5189,7 +5314,7 @@ $._FrozenElementListIterator$ = function(_list) {
 $.MapView$ = function(container, tilesource) {
   if ($ === tilesource)
     tilesource = null;
-  var t1 = new $.MapView(null, null, 0, $.LatLon$origin(), null, null, 0, null, false, false, null, null, null, []);
+  var t1 = new $.MapView(null, null, 0, $.LatLon$origin(), null, null, null, 0, null, false, false, null, null, null, []);
   t1.MapView$2$tilesource(container, tilesource);
   return t1;
 };
@@ -5317,6 +5442,10 @@ $.le$slow = function(a, b) {
   return a.operator$le$1(b);
 };
 
+$.add = function(a, b) {
+  return typeof a === 'number' && typeof b === 'number' ? a + b : $.add$slow(a, b);
+};
+
 $._ChildrenElementList$_wrap = function(element) {
   return new $._ChildrenElementList(element, element.get$$$dom_children());
 };
@@ -5327,10 +5456,6 @@ $.LatLon$origin = function() {
 
 $.exp = function(x) {
   return Math.exp($.checkNum(x));
-};
-
-$.add = function(a, b) {
-  return typeof a === 'number' && typeof b === 'number' ? a + b : $.add$slow(a, b);
 };
 
 $.dynamicSetMetadata = function(inputTable) {
@@ -5599,22 +5724,6 @@ $.defineProperty = function(obj, property, value) {
       {value: value, enumerable: false, writable: true, configurable: true});
 };
 
-$.print = function(object) {
-  $.Primitives_printString(object);
-};
-
-$.checkString = function(value) {
-  if (!(typeof value === 'string')) {
-    $.checkNull(value);
-    throw $.$$throw($.ArgumentError$(value));
-  }
-  return value;
-};
-
-$.div = function(a, b) {
-  return typeof a === 'number' && typeof b === 'number' ? a / b : $.div$slow(a, b);
-};
-
 $.dynamicFunction = function(name$) {
   var f = Object.prototype[name$];
   if (!(f == null) && !!f.methods)
@@ -5627,6 +5736,18 @@ $.dynamicFunction = function(name$) {
   bind.methods = methods;
   $.defineProperty(Object.prototype, name$, bind);
   return methods;
+};
+
+$.checkString = function(value) {
+  if (!(typeof value === 'string')) {
+    $.checkNull(value);
+    throw $.$$throw($.ArgumentError$(value));
+  }
+  return value;
+};
+
+$.div = function(a, b) {
+  return typeof a === 'number' && typeof b === 'number' ? a / b : $.div$slow(a, b);
 };
 
 $.Primitives_objectToString = function(object) {
@@ -7034,13 +7155,6 @@ $.DateImplementation$fromMillisecondsSinceEpoch = function(millisecondsSinceEpoc
   return t1;
 };
 
-$.forEach = function(receiver, f) {
-  if (!$.isJsArray(receiver))
-    return receiver.forEach$1(f);
-  else
-    return $.Collections_forEach(receiver, f);
-};
-
 $.set$length = function(receiver, newLength) {
   if ($.isJsArray(receiver)) {
     $.checkNull(newLength);
@@ -7055,9 +7169,11 @@ $.set$length = function(receiver, newLength) {
   return newLength;
 };
 
-$.Collections_forEach = function(iterable, f) {
-  for (var t1 = $.iterator(iterable); t1.hasNext$0() === true;)
-    f.call$1(t1.next$0());
+$.forEach = function(receiver, f) {
+  if (!$.isJsArray(receiver))
+    return receiver.forEach$1(f);
+  else
+    return $.Collections_forEach(receiver, f);
 };
 
 $.typeNameInFirefox = function(obj) {
@@ -7089,6 +7205,11 @@ $.gt$slow = function(a, b) {
 
 $.ioore = function(index) {
   throw $.$$throw($.IndexOutOfRangeException$(index));
+};
+
+$.Collections_forEach = function(iterable, f) {
+  for (var t1 = $.iterator(iterable); t1.hasNext$0() === true;)
+    f.call$1(t1.next$0());
 };
 
 $._Collections_forEach = function(iterable, f) {
@@ -7249,6 +7370,12 @@ $._SharedWorkerContextEventsImpl$ = function(_ptr) {
 
 $._IDBVersionChangeRequestEventsImpl$ = function(_ptr) {
   return new $._IDBVersionChangeRequestEventsImpl(_ptr);
+};
+
+$.ZoomSlider$ = function(_parent) {
+  var t1 = new $.ZoomSlider(_parent, null, null);
+  t1.ZoomSlider$1(_parent);
+  return t1;
 };
 
 $.FutureNotCompleteException$ = function() {
@@ -7923,6 +8050,12 @@ $.$defineNativeClass('HTMLButtonElement', ["name?", "value="], {
  is$Element: function() { return true; }
 });
 
+$.$defineNativeClass('CSSFontFaceRule', ["style?"], {
+});
+
+$.$defineNativeClass('WebKitCSSKeyframeRule', ["style?"], {
+});
+
 $.$defineNativeClass('WebKitCSSKeyframesRule', ["name?"], {
 });
 
@@ -7930,6 +8063,9 @@ $.$defineNativeClass('WebKitCSSMatrix', [], {
  toString$0: function() {
   return this.toString();
 }
+});
+
+$.$defineNativeClass('CSSPageRule', ["style?"], {
 });
 
 $.$defineNativeClass('CSSRuleList', ["length?"], {
@@ -8000,6 +8136,9 @@ $.$defineNativeClass('CSSStyleDeclaration', ["length?"], {
   return this.getPropertyValue$1('clear');
 },
  clear$0: function() { return this.get$clear().call$0(); },
+ set$cursor: function(value) {
+  this.setProperty$3('cursor', value, '');
+},
  get$filter: function() {
   return this.getPropertyValue$1($.S($._browserPrefix()) + 'filter');
 },
@@ -8025,6 +8164,9 @@ $.$defineNativeClass('CSSStyleDeclaration', ["length?"], {
  set$width: function(value) {
   this.setProperty$3('width', value, '');
 }
+});
+
+$.$defineNativeClass('CSSStyleRule', ["style?"], {
 });
 
 $.$defineNativeClass('WebKitCSSTransformValue', [], {
@@ -8091,7 +8233,7 @@ $.$defineNativeClass('HTMLCanvasElement', ["height=", "width="], {
  is$Element: function() { return true; }
 });
 
-$.$defineNativeClass('CanvasRenderingContext2D', ["fillStyle!", "lineJoin!", "lineWidth!", "strokeStyle!"], {
+$.$defineNativeClass('CanvasRenderingContext2D', ["fillStyle!", "lineCap!", "lineJoin!", "lineWidth!", "strokeStyle!"], {
  arc$6: function(x, y, radius, startAngle, endAngle, anticlockwise) {
   return this.arc(x,y,radius,startAngle,endAngle,anticlockwise);
 },
@@ -8136,6 +8278,9 @@ $.$defineNativeClass('CanvasRenderingContext2D', ["fillStyle!", "lineJoin!", "li
 },
  setFillColorRgb$4: function(r, g, b, a) {
   this.fillStyle = 'rgba(' + $.S(r) + ', ' + $.S(g) + ', ' + $.S(b) + ', ' + $.S(a) + ')';
+},
+ setFillColorRgb$3: function(r,g,b) {
+  return this.setFillColorRgb$4(r,g,b,1)
 }
 });
 
@@ -8481,6 +8626,9 @@ $.$defineNativeClass('DocumentFragment', [], {
  get$classes: function() {
   return $._FrozenCSSClassSet$();
 },
+ get$style: function() {
+  return $.Element_Element$tag('div').get$style();
+},
  click$0: function() {
 },
  get$click: function() { return new $.BoundClosure(this, 'click$0'); },
@@ -8517,7 +8665,7 @@ $.$defineNativeClass('DocumentType', ["name?"], {
 }
 });
 
-$.$defineNativeClass('Element', ["id?", "clientHeight?", "clientWidth?"], {
+$.$defineNativeClass('Element', ["id?", "clientHeight?", "clientWidth?", "style?"], {
  get$attributes: function() {
   return $._ElementAttributeMap$(this);
 },
@@ -9558,6 +9706,9 @@ $.$defineNativeClass('DOMWindow', ["name?", "navigator?"], {
  get$on: function() {
   return $._LocalWindowEventsImpl$(this);
 },
+ get$_parent: function() {
+return this.parent;
+},
  get$top: function() {
   return $._convertNativeToDart_Window(this.get$_top());
 },
@@ -9933,7 +10084,7 @@ $.$defineNativeClass('NodeIterator', [], {
 }
 });
 
-$.$defineNativeClass('NodeList', ["length?"], {
+$.$defineNativeClass('NodeList', ["_parent?", "length?"], {
  iterator$0: function() {
   return $._FixedSizeListIterator$(this);
 },
@@ -12027,8 +12178,8 @@ $.$defineNativeClass('DOMWindow', [], {
 }
 });
 
-// 341 dynamic classes.
-// 389 classes
+// 345 dynamic classes.
+// 393 classes
 // 33 !leaf
 (function(){
   var v0/*class(_SVGTextPositioningElementImpl)*/ = 'SVGTextPositioningElement|SVGTextElement|SVGTSpanElement|SVGTRefElement|SVGAltGlyphElement|SVGTextElement|SVGTSpanElement|SVGTRefElement|SVGAltGlyphElement';
