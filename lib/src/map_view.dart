@@ -15,7 +15,7 @@ class MapView {
   var _center = new LatLon.origin();  
   var _tilesource;
   PanNavigator _panNavigator;
-  
+  ZoomSlider _zoomSlider;
 
   /* -------------------------------- raw mouse handling -------------------------------- */
   var _lastMouseDownTimestamp = 0;
@@ -67,7 +67,6 @@ class MapView {
          // a click generated at the end of a drag sequence
          //      mouse down, mouse move, ..., mouse move, mouse up, click  
          // Ignore it.
-         print("ignoring click ...");
          return;
        }
        deferredEvent = event;
@@ -77,13 +76,15 @@ class MapView {
        onDoubleClick(event);
      }
   }
-    
+
+  /* --------------------------- semantic mouse events -------------------------------- */  
   onDoubleClick(event) {
     zoomIn();
   }
   
   onClick(event) {
     _panNavigator.onClick(event);
+    _zoomSlider.onClick(event);
   }
   
   onDragStart(event) {
@@ -111,6 +112,7 @@ class MapView {
   
   onMove(event) {
     _panNavigator.onMouseMove(event);
+    _zoomSlider.onMouseMove(event);
   }
 
   onMouseWheel(event) {
@@ -170,6 +172,9 @@ class MapView {
     
     _panNavigator = new PanNavigator(this, 40,40);
     _panNavigator.render();
+    
+    _zoomSlider = new ZoomSlider(this);
+    _zoomSlider.render();
   }
   
   /// the layer at leven 0 (for drawing the map)
@@ -340,6 +345,137 @@ class MapView {
     var x = tc.tilePlaneX(this._tilesource) - 100;
     var y = tc.tilePlaneY(this._tilesource);
     _panMoveTo(x,y,-200,0);
+  }
+}
+
+class Rectangle {
+   int x,y,width, height;
+   bool mouseOver = false;
+   Rectangle(this.x, this.y, this.width, this.height);
+   
+   render(CanvasRenderingContext2D ctx) {
+     ctx.beginPath();
+     ctx.moveTo(x, y);
+     ctx.lineTo(x+width, y);
+     ctx.lineTo(x+width, y+height);
+     ctx.lineTo(x, y+height);
+     ctx.closePath();
+     ctx.stroke();
+     ctx.fill();
+   }
+   
+   Rectangle translate(dx, dy) {
+     return new Rectangle(x + dx, y + dy, width, height);
+   }
+   
+   renderPlus(CanvasRenderingContext2D ctx) {
+     ctx
+       ..strokeStyle = "rgb(100,100,100)"
+       ..lineWidth = 3
+       ..lineCap = "round";
+     
+     ctx
+      ..beginPath()
+      ..moveTo(x + 5, y + 10)
+      ..lineTo(x + 15, y + 10)
+      ..stroke();
+     
+     ctx
+     ..beginPath()
+     ..moveTo(x + 10, y + 5)
+     ..lineTo(x + 10, y + 15)
+     ..stroke();     
+   }
+   
+   renderMinus(CanvasRenderingContext2D ctx) {
+      ctx
+       ..strokeStyle = "rgb(100,100,100)"
+       ..lineWidth = 3
+       ..lineCap = "round";
+     
+     ctx
+      ..beginPath()
+      ..moveTo(x + 5, y + 10)
+      ..lineTo(x + 15, y + 10)
+      ..stroke();
+   }
+   
+   isInside(x,y) {
+     return x >= this.x && x < this.x + this.width
+         && y >= this.y && y <  this.y + this.height;
+   }
+   
+   onMouseMove(p, setCursor) {
+     var inside = isInside(p.x,p.y);
+     if (inside && ! mouseOver) {
+       setCursor("pointer");
+       mouseOver = true;
+     } else if (!inside && mouseOver) {
+       setCursor("default");
+       mouseOver = false;
+     }
+   }   
+   
+   MyPoint get center =>  new MyPoint (x + width ~/ 2, y + height ~/ 2);
+}
+
+class ZoomSlider {
+  
+  MapView _parent;
+  
+  Rectangle plus;
+  Rectangle minus;
+  
+  ZoomSlider(this._parent) {
+    plus = new Rectangle(30,90,20,20);
+    minus = plus.translate(0, 200);    
+  }
+  
+  _renderZoomNob(ctx, r) {
+    var shadow = r.translate(3, 3);
+    ctx.setFillColorRgb(120, 120, 120);
+    ctx.lineWidth = 0;
+    shadow.render(ctx);
+    ctx.setFillColorRgb(255,255,255); 
+    ctx.lineWidth = 1;
+    ctx.strokeStyle = "rgb(50,50,50)";
+    ctx.lineWidth = 1;
+    r.render(ctx);
+  }
+  
+  _renderZoomSlider(ctx) {
+     var c1 = plus.center;
+     var c2 = minus.center;
+     ctx.beginPath();
+     ctx.moveTo(c1.x, c1.y);
+     ctx.lineTo(c2.x, c2.y);
+     ctx.strokeStyle = "rgba(150,150,150, 0.7)";
+     ctx.lineWidth = 5;
+     ctx.stroke();
+  }
+  
+  render() {
+    var ctx = _parent.layer1.context2d;
+    ctx.save();    
+    _renderZoomSlider(ctx);
+    _renderZoomNob(ctx, plus);
+    plus.renderPlus(ctx);
+    _renderZoomNob(ctx, minus);
+    minus.renderMinus(ctx);
+    ctx.restore();
+  }
+  
+  onMouseMove(event) {
+    setCursor(name) => _parent.layer1.style.cursor = name;
+    var p = _parent.layerXY(event);
+    plus.onMouseMove(p, setCursor);
+    minus.onMouseMove(p, setCursor);
+  }
+  
+  onClick(event) {
+    var p = _parent.layerXY(event);
+    if (plus.isInside(p.x,p.y)) _parent.zoomIn();
+    else if (minus.isInside(p.x, p.y)) _parent.zoomOut();
   }
 }
 
