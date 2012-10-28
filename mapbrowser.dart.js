@@ -1134,7 +1134,7 @@ $$.ConstantMap = {"":
   return $.Maps_mapToString(this);
 },
  _throwImmutable$0: function() {
-  throw $.$$throw($.CTC26);
+  throw $.$$throw($.CTC22);
 },
  operator$indexSet$2: function(key, val) {
   return this._throwImmutable$0();
@@ -1190,7 +1190,7 @@ $$.MapView = {"":
     if ($.gtB($.sub($.Date_Date$now().get$millisecondsSinceEpoch(), this._lastMouseDownTimestamp), 200))
       return;
     this.deferredEvent = event$;
-    $.window().setTimeout$2(new $.MapView__rawMouseClick_anon(this), 200);
+    $.window().setTimeout$2(new $.MapView__rawMouseClick_anon(this), 100);
   } else {
     this.deferredEvent = null;
     this.onDoubleClick$1(event$);
@@ -1520,10 +1520,10 @@ $$.MapView = {"":
     return this._panMoveTo$4$bailout(1, x, y, dx, dy);
   if (typeof y !== 'number')
     return this._panMoveTo$4$bailout(1, x, y, dx, dy);
-  var sx = $.tdiv(dx, 5);
-  var sy = $.tdiv(dy, 5);
+  var sx = $.tdiv(dx, 10);
+  var sy = $.tdiv(dy, 10);
   var t1 = new $.MapView__panMoveTo_makeRenderer(this);
-  for (var t2 = dx > 0, t3 = dx < 0, t4 = dy > 0, t5 = dy < 0, t6 = x + dx, t7 = y + dy, i = 1; i <= 5; ++i) {
+  for (var t2 = dx > 0, t3 = dx < 0, t4 = dy > 0, t5 = dy < 0, t6 = x + dx, t7 = y + dy, i = 1; i <= 10; ++i) {
     var nx = x + i * sx;
     if (t2)
       nx = $.min(t6, nx);
@@ -1548,10 +1548,10 @@ $$.MapView = {"":
   }
 },
  _panMoveTo$4$bailout: function(state0, x, y, dx, dy) {
-  var sx = $.tdiv(dx, 5);
-  var sy = $.tdiv(dy, 5);
+  var sx = $.tdiv(dx, 10);
+  var sy = $.tdiv(dy, 10);
   var t1 = new $.MapView__panMoveTo_makeRenderer(this);
-  for (var t2 = dx > 0, t3 = dx < 0, t4 = dy > 0, t5 = dy < 0, i = 1; i <= 5; ++i) {
+  for (var t2 = dx > 0, t3 = dx < 0, t4 = dy > 0, t5 = dy < 0, i = 1; i <= 10; ++i) {
     var nx = $.add(x, i * sx);
     if (t2)
       nx = $.min($.add(x, dx), nx);
@@ -1590,6 +1590,16 @@ $$.MapView = {"":
   var tc = this.tileCoordinates$3(this._center.get$lat(), this._center.get$lon(), this.get$zoom());
   this._panMoveTo$4($.sub(tc.tilePlaneX$1(this._tilesource), 100), tc.tilePlaneY$1(this._tilesource), -200, 0);
 },
+ setPointerCursor$0: function() {
+  this._layer1.get$style().set$cursor('pointer');
+  return 'pointer';
+},
+ get$setPointerCursor: function() { return new $.BoundClosure(this, 'setPointerCursor$0'); },
+ setDefaultCursor$0: function() {
+  this._layer1.get$style().set$cursor('default');
+  return 'default';
+},
+ get$setDefaultCursor: function() { return new $.BoundClosure(this, 'setDefaultCursor$0'); },
  MapView$2$tilesource: function(container, tilesource) {
   var t1 = $ === tilesource;
   if (t1)
@@ -1620,23 +1630,77 @@ $$.MapView = {"":
 }
 };
 
-$$.Rectangle = {"":
- ["x?", "y?", "width=", "height=", "mouseOver"],
+$$.RectangularArea = {"":
+ ["x?", "y?", "width=", "height="],
  "super": "Object",
+ translate$2: function(dx, dy) {
+  return $.RectangularArea$($.add(this.x, dx), $.add(this.y, dy), this.width, this.height);
+},
+ isInside$1: function(p) {
+  var t1 = p.get$x();
+  var t2 = this.x;
+  if ($.geB(t1, t2))
+    if ($.ltB(p.get$x(), $.add(t2, this.width))) {
+      t1 = p.get$y();
+      t2 = this.y;
+      t1 = $.geB(t1, t2) && $.ltB(p.get$y(), $.add(t2, this.height));
+    } else
+      t1 = false;
+  else
+    t1 = false;
+  return t1;
+},
+ get$center: function() {
+  return $.MyPoint$($.add(this.x, $.tdiv(this.width, 2)), $.add(this.y, $.tdiv(this.height, 2)));
+}
+};
+
+$$.RespondingRectangularArea = {"":
+ ["onEnter", "onExit", "mouseOver", "x", "y", "width", "height"],
+ "super": "RectangularArea",
+ onEnter$0: function() { return this.onEnter.call$0(); },
+ onExit$0: function() { return this.onExit.call$0(); },
+ onMouseMove$1: function(p) {
+  var t1 = this.isInside$1(p) === true;
+  if (t1 && !this.mouseOver) {
+    if (!(this.onEnter == null))
+      this.onEnter$0();
+    this.mouseOver = true;
+  } else if (!t1 && this.mouseOver) {
+    if (!(this.onExit == null))
+      this.onExit$0();
+    this.mouseOver = false;
+  }
+},
+ RespondingRectangularArea$6$onEnter$onExit: function(x, y, width, height, onEnter, onExit) {
+  this.onEnter = onEnter;
+  this.onExit = onExit;
+}
+};
+
+$$.ZoomNob = {"":
+ ["parent", "onEnter", "onExit", "mouseOver", "x", "y", "width", "height"],
+ "super": "RespondingRectangularArea",
  render$1: function(ctx) {
+  var shadow = this.translate$2(3, 3);
+  ctx.setFillColorRgb$3(120, 120, 120);
+  ctx.set$lineWidth(0);
+  this._renderRect$2(ctx, shadow);
+  ctx.setFillColorRgb$3(255, 255, 255);
+  ctx.set$lineWidth(1);
+  ctx.set$strokeStyle('rgb(50,50,50)');
+  ctx.set$lineWidth(1);
+  this._renderRect$2(ctx, this);
+},
+ _renderRect$2: function(ctx, r) {
   ctx.beginPath$0();
-  var t1 = this.x;
-  var t2 = this.y;
-  ctx.moveTo$2(t1, t2);
-  ctx.lineTo$2($.add(t1, this.width), t2);
-  ctx.lineTo$2($.add(t1, this.width), $.add(t2, this.height));
-  ctx.lineTo$2(t1, $.add(t2, this.height));
+  ctx.moveTo$2(r.get$x(), r.get$y());
+  ctx.lineTo$2($.add(r.get$x(), r.get$width()), r.get$y());
+  ctx.lineTo$2($.add(r.get$x(), r.get$width()), $.add(r.get$y(), r.get$height()));
+  ctx.lineTo$2(r.get$x(), $.add(r.get$y(), r.get$height()));
   ctx.closePath$0();
   ctx.stroke$0();
   ctx.fill$0();
-},
- translate$2: function(dx, dy) {
-  return $.Rectangle$($.add(this.x, dx), $.add(this.y, dy), this.width, this.height);
 },
  renderPlus$1: function(ctx) {
   ctx.set$strokeStyle('rgb(100,100,100)');
@@ -1666,47 +1730,14 @@ $$.Rectangle = {"":
   ctx.lineTo$2($.add(t1, 15), $.add(t3, 10));
   ctx.stroke$0();
 },
- isInside$2: function(x, y) {
-  var t1 = this.x;
-  if ($.geB(x, t1))
-    if ($.ltB(x, $.add(t1, this.width))) {
-      t1 = this.y;
-      t1 = $.geB(y, t1) && $.ltB(y, $.add(t1, this.height));
-    } else
-      t1 = false;
-  else
-    t1 = false;
-  return t1;
-},
- onMouseMove$2: function(p, setCursor) {
-  var t1 = this.isInside$2(p.get$x(), p.get$y()) === true;
-  if (t1 && !this.mouseOver) {
-    setCursor.call$1('pointer');
-    this.mouseOver = true;
-  } else if (!t1 && this.mouseOver) {
-    setCursor.call$1('default');
-    this.mouseOver = false;
-  }
-},
- get$center: function() {
-  return $.MyPoint$($.add(this.x, $.tdiv(this.width, 2)), $.add(this.y, $.tdiv(this.height, 2)));
+ ZoomNob$5: function(parent$, x, y, width, height) {
+  this.parent = parent$;
 }
 };
 
 $$.ZoomSlider = {"":
- ["_lib1_parent?", "plus", "minus"],
+ ["_lib1_parent", "plus", "minus"],
  "super": "Object",
- _renderZoomNob$2: function(ctx, r) {
-  var shadow = r.translate$2(3, 3);
-  ctx.setFillColorRgb$3(120, 120, 120);
-  ctx.set$lineWidth(0);
-  shadow.render$1(ctx);
-  ctx.setFillColorRgb$3(255, 255, 255);
-  ctx.set$lineWidth(1);
-  ctx.set$strokeStyle('rgb(50,50,50)');
-  ctx.set$lineWidth(1);
-  r.render$1(ctx);
-},
  _renderZoomSlider$1: function(ctx) {
   var c1 = this.plus.get$center();
   var c2 = this.minus.get$center();
@@ -1721,34 +1752,34 @@ $$.ZoomSlider = {"":
   var ctx = this._lib1_parent.get$layer1().get$context2d();
   ctx.save$0();
   this._renderZoomSlider$1(ctx);
-  this._renderZoomNob$2(ctx, this.plus);
+  this.plus.render$1(ctx);
   this.plus.renderPlus$1(ctx);
-  this._renderZoomNob$2(ctx, this.minus);
+  this.minus.render$1(ctx);
   this.minus.renderMinus$1(ctx);
   ctx.restore$0();
 },
  onMouseMove$1: function(event$) {
-  var t1 = new $.ZoomSlider_onMouseMove_setCursor(this);
   var p = this._lib1_parent.layerXY$1(event$);
-  this.plus.onMouseMove$2(p, t1);
-  this.minus.onMouseMove$2(p, t1);
+  this.plus.onMouseMove$1(p);
+  this.minus.onMouseMove$1(p);
 },
  onClick$1: function(event$) {
   var t1 = this._lib1_parent;
   var p = t1.layerXY$1(event$);
-  if (this.plus.isInside$2(p.get$x(), p.get$y()) === true)
+  if (this.plus.isInside$1(p) === true)
     t1.zoomIn$0();
-  else if (this.minus.isInside$2(p.get$x(), p.get$y()) === true)
+  else if (this.minus.isInside$1(p) === true)
     t1.zoomOut$0();
 },
  ZoomSlider$1: function(_parent) {
-  this.plus = $.Rectangle$(30, 90, 20, 20);
-  this.minus = this.plus.translate$2(0, 200);
+  var t1 = this._lib1_parent;
+  this.plus = $.ZoomNob$(t1, 30, 90, 20, 20);
+  this.minus = $.ZoomNob$other(t1, this.plus.translate$2(0, 200));
 }
 };
 
 $$.PanNavigator = {"":
- ["_x", "_y", "_lib1_parent?", "_mouseOver"],
+ ["up", "right", "down", "left?", "_x", "_y", "_lib1_parent", "_mouseOver"],
  "super": "Object",
  render$0: function() {
   var ctx = this._lib1_parent.get$layer1().get$context2d();
@@ -1781,7 +1812,7 @@ $$.PanNavigator = {"":
   }
   ctx.restore$0();
 },
- _hit$1: function(event$) {
+ isInside$1: function(event$) {
   var p = this._lib1_parent.layerXY$1(event$);
   var t1 = this._x;
   var t2 = p.get$x();
@@ -1794,38 +1825,10 @@ $$.PanNavigator = {"":
     throw $.iae(t5);
   return $.sqrt(t3 + $.pow(t4 - t5, 2)) <= 25;
 },
- _hitNavRow$3: function(x, y, rect) {
-  if (0 >= rect.length)
-    throw $.ioore(0);
-  if ($.geB(x, rect[0])) {
-    var t1 = rect.length;
-    if (0 >= t1)
-      throw $.ioore(0);
-    var t2 = rect[0];
-    if (2 >= t1)
-      throw $.ioore(2);
-    if ($.ltB(x, $.add(t2, rect[2]))) {
-      if (1 >= rect.length)
-        throw $.ioore(1);
-      if ($.geB(y, rect[1])) {
-        t1 = rect.length;
-        if (1 >= t1)
-          throw $.ioore(1);
-        t2 = rect[1];
-        if (3 >= t1)
-          throw $.ioore(3);
-        var t3 = $.ltB(y, $.add(t2, rect[3]));
-        t1 = t3;
-      } else
-        t1 = false;
-    } else
-      t1 = false;
-  } else
-    t1 = false;
-  return t1;
-},
  onMouseMove$1: function(event$) {
-  var t1 = this._hit$1(event$) === true;
+  var hit = this.isInside$1(event$);
+  var p = this._lib1_parent.layerXY$1(event$);
+  var t1 = hit === true;
   if (t1 && !this._mouseOver) {
     this._mouseOver = true;
     this.render$0();
@@ -1833,18 +1836,29 @@ $$.PanNavigator = {"":
     this._mouseOver = false;
     this.render$0();
   }
+  this.up.onMouseMove$1(p);
+  this.right.onMouseMove$1(p);
+  this.down.onMouseMove$1(p);
+  this.left.onMouseMove$1(p);
 },
  onClick$1: function(event$) {
   var t1 = this._lib1_parent;
   var p = t1.layerXY$1(event$);
-  if (this._hitNavRow$3(p.get$x(), p.get$y(), $.CTC19) === true)
+  if (this.up.isInside$1(p) === true)
     t1.panUp$0();
-  else if (this._hitNavRow$3(p.get$x(), p.get$y(), $.CTC20) === true)
+  else if (this.right.isInside$1(p) === true)
     t1.panRight$0();
-  else if (this._hitNavRow$3(p.get$x(), p.get$y(), $.CTC21) === true)
+  else if (this.down.isInside$1(p) === true)
     t1.panDown$0();
-  else if (this._hitNavRow$3(p.get$x(), p.get$y(), $.CTC22) === true)
+  else if (this.left.isInside$1(p) === true)
     t1.panLeft$0();
+},
+ PanNavigator$3: function(_parent, _x, _y) {
+  var t1 = this._lib1_parent;
+  this.up = $.RespondingRectangularArea$(35, 20, 10, 5, t1.get$setPointerCursor(), t1.get$setDefaultCursor());
+  this.right = $.RespondingRectangularArea$(55, 35, 5, 10, t1.get$setPointerCursor(), t1.get$setDefaultCursor());
+  this.left = $.RespondingRectangularArea$(20, 35, 5, 10, t1.get$setPointerCursor(), t1.get$setDefaultCursor());
+  this.down = $.RespondingRectangularArea$(35, 55, 10, 5, t1.get$setPointerCursor(), t1.get$setDefaultCursor());
 }
 };
 
@@ -2157,7 +2171,7 @@ $$._FilteredElementList = {"":
   if ($.geB(newLength, len))
     return;
   else if ($.ltB(newLength, 0))
-    throw $.$$throw($.CTC29);
+    throw $.$$throw($.CTC25);
   this.removeRange$2($.sub(newLength, 1), $.sub(len, newLength));
 },
  add$1: function(value) {
@@ -2167,7 +2181,7 @@ $$._FilteredElementList = {"":
   this.add$1(value);
 },
  sort$1: function(compare) {
-  throw $.$$throw($.CTC27);
+  throw $.$$throw($.CTC23);
 },
  removeRange$2: function(start, rangeLength) {
   $.forEach($.getRange(this.get$_filtered(), start, rangeLength), new $._FilteredElementList_removeRange_anon());
@@ -2216,7 +2230,7 @@ $$._FrozenCSSClassSet = {"":
  ["_lib_element"],
  "super": "_CssClassSet",
  _write$1: function(s) {
-  throw $.$$throw($.CTC24);
+  throw $.$$throw($.CTC20);
 },
  _read$0: function() {
   return $.Set_Set();
@@ -2305,7 +2319,7 @@ $$._ChildrenElementList = {"":
   this._lib_element.$dom_replaceChild$2(value, $.index(this._childElements, index));
 },
  set$length: function(newLength) {
-  throw $.$$throw($.CTC28);
+  throw $.$$throw($.CTC24);
 },
  add$1: function(value) {
   this._lib_element.$dom_appendChild$1(value);
@@ -2318,7 +2332,7 @@ $$._ChildrenElementList = {"":
   return $.iterator(this._toList$0());
 },
  sort$1: function(compare) {
-  throw $.$$throw($.CTC27);
+  throw $.$$throw($.CTC23);
 },
  getRange$2: function(start, rangeLength) {
   return $._FrozenElementList$_wrap($._Lists_getRange(this, start, rangeLength, []));
@@ -2371,22 +2385,22 @@ $$._FrozenElementList = {"":
   return $.index(this._nodeList, index);
 },
  operator$indexSet$2: function(index, value) {
-  throw $.$$throw($.CTC28);
+  throw $.$$throw($.CTC24);
 },
  set$length: function(newLength) {
   $.set$length(this._nodeList, newLength);
 },
  add$1: function(value) {
-  throw $.$$throw($.CTC28);
+  throw $.$$throw($.CTC24);
 },
  addLast$1: function(value) {
-  throw $.$$throw($.CTC28);
+  throw $.$$throw($.CTC24);
 },
  iterator$0: function() {
   return $._FrozenElementListIterator$(this);
 },
  sort$1: function(compare) {
-  throw $.$$throw($.CTC28);
+  throw $.$$throw($.CTC24);
 },
  getRange$2: function(start, rangeLength) {
   return $._FrozenElementList$_wrap($.getRange(this._nodeList, start, rangeLength));
@@ -2398,10 +2412,10 @@ $$._FrozenElementList = {"":
   return this.indexOf$2(element,0)
 },
  clear$0: function() {
-  throw $.$$throw($.CTC28);
+  throw $.$$throw($.CTC24);
 },
  removeLast$0: function() {
-  throw $.$$throw($.CTC28);
+  throw $.$$throw($.CTC24);
 },
  last$0: function() {
   return $.last(this._nodeList);
@@ -4526,15 +4540,6 @@ $$.MapView__panMoveTo_makeRenderer_anon = {"":
 }
 };
 
-$$.ZoomSlider_onMouseMove_setCursor = {"":
- ["this_0"],
- "super": "Closure",
- call$1: function(name$) {
-  this.this_0.get$_lib1_parent().get$layer1().get$style().set$cursor(name$);
-  return name$;
-}
-};
-
 $$._CssClassSet_clear_anon = {"":
  [],
  "super": "Closure",
@@ -5027,10 +5032,6 @@ $.ExceptionImplementation$ = function(message) {
   return new $.ExceptionImplementation(message);
 };
 
-$.Rectangle$ = function(x, y, width, height) {
-  return new $.Rectangle(x, y, width, height, false);
-};
-
 $.stringJoinUnchecked = function(array, separator) {
   return array.join(separator);
 };
@@ -5096,16 +5097,6 @@ $._Collections_filter = function(source, destination, f) {
   return destination;
 };
 
-$.removeLast = function(receiver) {
-  if ($.isJsArray(receiver)) {
-    $.checkGrowable(receiver, 'removeLast');
-    if ($.get$length(receiver) === 0)
-      throw $.$$throw($.IndexOutOfRangeException$(-1));
-    return receiver.pop();
-  }
-  return receiver.removeLast$0();
-};
-
 $._NotificationEventsImpl$ = function(_ptr) {
   return new $._NotificationEventsImpl(_ptr);
 };
@@ -5160,6 +5151,10 @@ $._WorkerContextEventsImpl$ = function(_ptr) {
   return new $._WorkerContextEventsImpl(_ptr);
 };
 
+$.DualPivotQuicksort_sort = function(a, compare) {
+  $.DualPivotQuicksort__doSort(a, 0, $.sub($.get$length(a), 1), compare);
+};
+
 $.$$throw = function(ex) {
   if (ex == null)
     ex = $.CTC0;
@@ -5175,6 +5170,16 @@ $._DocumentEventsImpl$ = function(_ptr) {
   return new $._DocumentEventsImpl(_ptr);
 };
 
+$.removeLast = function(receiver) {
+  if ($.isJsArray(receiver)) {
+    $.checkGrowable(receiver, 'removeLast');
+    if ($.get$length(receiver) === 0)
+      throw $.$$throw($.IndexOutOfRangeException$(-1));
+    return receiver.pop();
+  }
+  return receiver.removeLast$0();
+};
+
 $.regExpTest = function(regExp, str) {
   return $.regExpGetNative(regExp).test(str);
 };
@@ -5183,21 +5188,11 @@ $._convertNativeToDart_IDBAny = function(object) {
   return $._convertNativeToDart_AcceptStructuredClone(object, false);
 };
 
-$.DualPivotQuicksort_sort = function(a, compare) {
-  $.DualPivotQuicksort__doSort(a, 0, $.sub($.get$length(a), 1), compare);
-};
-
 $.typeNameInOpera = function(obj) {
   var name$ = $.constructorNameFallback(obj);
   if (name$ === 'Window')
     return 'DOMWindow';
   return name$;
-};
-
-$.DoubleLinkedQueueEntry$ = function(e) {
-  var t1 = new $.DoubleLinkedQueueEntry(null, null, null);
-  t1.DoubleLinkedQueueEntry$1(e);
-  return t1;
 };
 
 $.callTypeCast = function(value, property) {
@@ -5364,6 +5359,15 @@ $._JsCopier$ = function() {
   var t1 = new $._JsCopier($._MessageTraverserVisitedMap$());
   t1._JsCopier$0();
   return t1;
+};
+
+$.ZoomNob$ = function(parent$, x, y, width, height) {
+  var t1 = parent$.get$setPointerCursor();
+  var t2 = parent$.get$setDefaultCursor();
+  var t3 = new $.ZoomNob(null, null, null, false, x, y, width, height);
+  t3.RespondingRectangularArea$6$onEnter$onExit(x, y, width, height, t1, t2);
+  t3.ZoomNob$5(parent$, x, y, width, height);
+  return t3;
 };
 
 $.Primitives_getYear = function(receiver) {
@@ -5609,6 +5613,12 @@ $.LatLon$ = function(lat, lon) {
   return new $.LatLon(lat, lon);
 };
 
+$.DoubleLinkedQueueEntry$ = function(e) {
+  var t1 = new $.DoubleLinkedQueueEntry(null, null, null);
+  t1.DoubleLinkedQueueEntry$1(e);
+  return t1;
+};
+
 $.Primitives_getSeconds = function(receiver) {
   return receiver.isUtc === true ? $.Primitives_lazyAsJsDate(receiver).getUTCSeconds() : $.Primitives_lazyAsJsDate(receiver).getSeconds();
 };
@@ -5729,7 +5739,7 @@ $.dynamicFunction = function(name$) {
   if (!(f == null) && !!f.methods)
     return f.methods;
   var methods = {};
-  var dartMethod = Object.getPrototypeOf($.CTC30)[name$];
+  var dartMethod = Object.getPrototypeOf($.CTC26)[name$];
   if (!(dartMethod == null))
     $.propertySet(methods, 'Object', dartMethod);
   var bind = function() {return $.dynamicBind.call$4(this, name$, methods, Array.prototype.slice.call(arguments));};
@@ -5752,13 +5762,6 @@ $.div = function(a, b) {
 
 $.Primitives_objectToString = function(object) {
   return 'Instance of \'' + $.S($.Primitives_objectTypeName(object)) + '\'';
-};
-
-$.addLast = function(receiver, value) {
-  if (!$.isJsArray(receiver))
-    return receiver.addLast$1(value);
-  $.checkGrowable(receiver, 'addLast');
-  receiver.push(value);
 };
 
 $._JsVisitedMap$ = function() {
@@ -5785,6 +5788,13 @@ $.min = function(a, b) {
     throw $.$$throw($.ArgumentError$(b));
   }
   throw $.$$throw($.ArgumentError$(a));
+};
+
+$.addLast = function(receiver, value) {
+  if (!$.isJsArray(receiver))
+    return receiver.addLast$1(value);
+  $.checkGrowable(receiver, 'addLast');
+  receiver.push(value);
 };
 
 $.trim = function(receiver) {
@@ -5939,7 +5949,9 @@ $._HttpRequestUploadEventsImpl$ = function(_ptr) {
 };
 
 $.PanNavigator$ = function(_parent, _x, _y) {
-  return new $.PanNavigator(_x, _y, _parent, false);
+  var t1 = new $.PanNavigator(null, null, null, null, _x, _y, _parent, false);
+  t1.PanNavigator$3(_parent, _x, _y);
+  return t1;
 };
 
 $.mul$slow = function(a, b) {
@@ -5969,6 +5981,10 @@ $._ChildNodeListLazy$ = function(_this) {
 
 $._AudioContextEventsImpl$ = function(_ptr) {
   return new $._AudioContextEventsImpl(_ptr);
+};
+
+$.RectangularArea$ = function(x, y, width, height) {
+  return new $.RectangularArea(x, y, width, height);
 };
 
 $._NodeListWrapper$ = function(list) {
@@ -6103,6 +6119,19 @@ $.max = function(a, b) {
   throw $.$$throw($.ArgumentError$(a));
 };
 
+$.ZoomNob$other = function(parent$, r) {
+  var t1 = r.get$x();
+  var t2 = r.get$y();
+  var t3 = r.get$width();
+  var t4 = r.get$height();
+  var t5 = parent$.get$setPointerCursor();
+  var t6 = parent$.get$setDefaultCursor();
+  var t7 = new $.ZoomNob(null, null, null, false, t1, t2, t3, t4);
+  t7.RespondingRectangularArea$6$onEnter$onExit(t1, t2, t3, t4, t5, t6);
+  t7.ZoomNob$5(parent$, t1, t2, t3, t4);
+  return t7;
+};
+
 $._deserializeMessage = function(message) {
   if ($._globalState().get$needSerialization() === true)
     return $._JsDeserializer$().deserialize$1(message);
@@ -6134,6 +6163,12 @@ $.stringReplaceAllUnchecked = function(receiver, from, to) {
     }
   else
     return $.stringReplaceJS(receiver, $.regExpMakeNative($.JSSyntaxRegExp$(from.replace($.regExpMakeNative($.CTC13, true), "\\$&"), false, false), true), to);
+};
+
+$.RespondingRectangularArea$ = function(x, y, width, height, onEnter, onExit) {
+  var t1 = new $.RespondingRectangularArea(null, null, false, x, y, width, height);
+  t1.RespondingRectangularArea$6$onEnter$onExit(x, y, width, height, onEnter, onExit);
+  return t1;
 };
 
 $.DualPivotQuicksort__dualPivotQuicksort = function(a, left, right, compare) {
@@ -7330,16 +7365,6 @@ $.ListImplementation_List = function(length$) {
   return $.Primitives_newList(length$);
 };
 
-$.indexOf$1 = function(receiver, element) {
-  if ($.isJsArray(receiver))
-    return $.Arrays_indexOf(receiver, element, 0, receiver.length);
-  else if (typeof receiver === 'string') {
-    $.checkNull(element);
-    return receiver.indexOf(element);
-  }
-  return receiver.indexOf$1(element);
-};
-
 $.StringBufferImpl$ = function(content$) {
   var t1 = new $.StringBufferImpl(null, null);
   t1.StringBufferImpl$1(content$);
@@ -7362,6 +7387,16 @@ $.div$slow = function(a, b) {
   if ($.checkNumbers(a, b))
     return a / b;
   return a.operator$div$1(b);
+};
+
+$.indexOf$1 = function(receiver, element) {
+  if ($.isJsArray(receiver))
+    return $.Arrays_indexOf(receiver, element, 0, receiver.length);
+  else if (typeof receiver === 'string') {
+    $.checkNull(element);
+    return receiver.indexOf(element);
+  }
+  return receiver.indexOf$1(element);
 };
 
 $._SharedWorkerContextEventsImpl$ = function(_ptr) {
@@ -7801,62 +7836,53 @@ Isolate.makeConstantList = function(list) {
   return list;
 };
 $.CTC1 = Isolate.makeConstantList([]);
-$.CTC25 = new Isolate.$isolateProperties.ConstantMap(0, {}, Isolate.$isolateProperties.CTC1);
-$.CTC31 = '';
-$.CTC28 = new Isolate.$isolateProperties.UnsupportedOperationException('');
-$.CTC32 = 'structured clone of ArrayBufferView';
+$.CTC21 = new Isolate.$isolateProperties.ConstantMap(0, {}, Isolate.$isolateProperties.CTC1);
+$.CTC27 = '';
+$.CTC24 = new Isolate.$isolateProperties.UnsupportedOperationException('');
+$.CTC28 = 'structured clone of ArrayBufferView';
 $.CTC10 = new Isolate.$isolateProperties.NotImplementedException('structured clone of ArrayBufferView');
-$.CTC33 = 'Invalid list length';
-$.CTC29 = new Isolate.$isolateProperties.ArgumentError('Invalid list length');
+$.CTC29 = 'Invalid list length';
+$.CTC25 = new Isolate.$isolateProperties.ArgumentError('Invalid list length');
 $.CTC14 = new Isolate.$isolateProperties._DeletedKeySentinel();
-$.CTC34 = 'frozen class set cannot be modified';
-$.CTC24 = new Isolate.$isolateProperties.UnsupportedOperationException('frozen class set cannot be modified');
-$.CTC35 = 'TODO(jacobr): should we impl?';
-$.CTC27 = new Isolate.$isolateProperties.UnsupportedOperationException('TODO(jacobr): should we impl?');
-$.CTC36 = 'structured clone of ImageData';
+$.CTC30 = 'frozen class set cannot be modified';
+$.CTC20 = new Isolate.$isolateProperties.UnsupportedOperationException('frozen class set cannot be modified');
+$.CTC31 = 'TODO(jacobr): should we impl?';
+$.CTC23 = new Isolate.$isolateProperties.UnsupportedOperationException('TODO(jacobr): should we impl?');
+$.CTC32 = 'structured clone of ImageData';
 $.CTC8 = new Isolate.$isolateProperties.NotImplementedException('structured clone of ImageData');
-$.CTC37 = 'structured clone of other type';
+$.CTC33 = 'structured clone of other type';
 $.CTC11 = new Isolate.$isolateProperties.NotImplementedException('structured clone of other type');
-$.CTC30 = new Isolate.$isolateProperties.Object();
-$.CTC38 = '^#[_a-zA-Z]\\w*$';
-$.CTC39 = false;
+$.CTC26 = new Isolate.$isolateProperties.Object();
+$.CTC34 = '^#[_a-zA-Z]\\w*$';
+$.CTC35 = false;
 $.CTC12 = new Isolate.$isolateProperties.JSSyntaxRegExp('^#[_a-zA-Z]\\w*$', false, false);
-$.CTC40 = 35;
-$.CTC41 = 55;
-$.CTC42 = 10;
-$.CTC43 = 5;
-$.CTC21 = Isolate.makeConstantList([35, 55, 10, 5]);
-$.CTC20 = Isolate.makeConstantList([55, 35, 5, 10]);
-$.CTC44 = '[-[\\]{}()*+?.,\\\\^$|#\\s]';
+$.CTC36 = '[-[\\]{}()*+?.,\\\\^$|#\\s]';
 $.CTC13 = new Isolate.$isolateProperties.JSSyntaxRegExp('[-[\\]{}()*+?.,\\\\^$|#\\s]', false, false);
-$.CTC45 = 'IDBKey containing Date';
+$.CTC37 = 'IDBKey containing Date';
 $.CTC16 = new Isolate.$isolateProperties.NotImplementedException('IDBKey containing Date');
-$.CTC46 = 'structured clone of File';
+$.CTC38 = 'structured clone of File';
 $.CTC6 = new Isolate.$isolateProperties.NotImplementedException('structured clone of File');
-$.CTC47 = 'structured clone of RegExp';
+$.CTC39 = 'structured clone of RegExp';
 $.CTC5 = new Isolate.$isolateProperties.NotImplementedException('structured clone of RegExp');
-$.CTC48 = 'Cannot removeLast on immutable List.';
+$.CTC40 = 'Cannot removeLast on immutable List.';
 $.CTC3 = new Isolate.$isolateProperties.UnsupportedOperationException('Cannot removeLast on immutable List.');
-$.CTC49 = 'structured clone of Date';
+$.CTC41 = 'structured clone of Date';
 $.CTC4 = new Isolate.$isolateProperties.NotImplementedException('structured clone of Date');
-$.CTC50 = 'deltaY is not supported';
+$.CTC42 = 'deltaY is not supported';
 $.CTC18 = new Isolate.$isolateProperties.UnsupportedOperationException('deltaY is not supported');
-$.CTC51 = 'structured clone of ArrayBuffer';
+$.CTC43 = 'structured clone of ArrayBuffer';
 $.CTC9 = new Isolate.$isolateProperties.NotImplementedException('structured clone of ArrayBuffer');
-$.CTC52 = 'Cannot sort immutable List.';
+$.CTC44 = 'Cannot sort immutable List.';
 $.CTC17 = new Isolate.$isolateProperties.UnsupportedOperationException('Cannot sort immutable List.');
-$.CTC26 = new Isolate.$isolateProperties.IllegalAccessException();
-$.CTC53 = 'structured clone of Blob';
+$.CTC22 = new Isolate.$isolateProperties.IllegalAccessException();
+$.CTC45 = 'structured clone of Blob';
 $.CTC7 = new Isolate.$isolateProperties.NotImplementedException('structured clone of Blob');
-$.CTC54 = 'offsetX is only supported on elements';
-$.CTC23 = new Isolate.$isolateProperties.UnsupportedOperationException('offsetX is only supported on elements');
-$.CTC55 = 20;
-$.CTC19 = Isolate.makeConstantList([35, 20, 10, 5]);
-$.CTC22 = Isolate.makeConstantList([20, 35, 5, 10]);
-$.CTC56 = null;
+$.CTC46 = 'offsetX is only supported on elements';
+$.CTC19 = new Isolate.$isolateProperties.UnsupportedOperationException('offsetX is only supported on elements');
+$.CTC47 = null;
 $.CTC0 = new Isolate.$isolateProperties.NullPointerException(null, Isolate.$isolateProperties.CTC1);
 $.CTC2 = new Isolate.$isolateProperties.NoMoreElementsException();
-$.CTC57 = 'Cannot add to immutable List.';
+$.CTC48 = 'Cannot add to immutable List.';
 $.CTC = new Isolate.$isolateProperties.UnsupportedOperationException('Cannot add to immutable List.');
 $.CTC15 = new Isolate.$isolateProperties.EmptyQueueException();
 $.Tile_READY = 1;
@@ -7866,10 +7892,7 @@ $.TileSource_DEFAULT_TILE_WIDTH = 256;
 $.Tile_LOADING = 0;
 $._getTypeNameOf = null;
 $._cachedBrowserPrefix = null;
-$.PanNavigator_UP = Isolate.$isolateProperties.CTC19;
 $._TimerFactory__factory = null;
-$.PanNavigator_LEFT = Isolate.$isolateProperties.CTC22;
-$.PanNavigator_RIGHT = Isolate.$isolateProperties.CTC20;
 $._ReceivePortImpl__nextFreeId = 1;
 $.PanNavigator_RADIUS = 25;
 $.Tile_ERROR = 2;
@@ -7882,7 +7905,6 @@ $.TileSource_DEFAULT_TILE_SOURCE = 'http://a.tile.openstreetmap.org/$zoom/$x/$y.
 $.TileSource_DEFAULT_ZOOM_LEVELS = 18;
 $.DateImplementation__MAX_MILLISECONDS_SINCE_EPOCH = 8640000000000000;
 $.TileSource_DEFAULT_TILE_HEIGHT = 256;
-$.PanNavigator_DOWN = Isolate.$isolateProperties.CTC21;
 var $ = null;
 Isolate.$finishClasses($$);
 $$ = {};
@@ -8621,7 +8643,7 @@ $.$defineNativeClass('DocumentFragment', [], {
   return;
 },
  get$attributes: function() {
-  return $.CTC25;
+  return $.CTC21;
 },
  get$classes: function() {
   return $._FrozenCSSClassSet$();
@@ -9706,9 +9728,6 @@ $.$defineNativeClass('DOMWindow', ["name?", "navigator?"], {
  get$on: function() {
   return $._LocalWindowEventsImpl$(this);
 },
- get$_parent: function() {
-return this.parent;
-},
  get$top: function() {
   return $._convertNativeToDart_Window(this.get$_top());
 },
@@ -9943,7 +9962,7 @@ $.$defineNativeClass('MouseEvent', ["x?", "y?"], {
   else {
     var target = this.get$target();
     if (!(typeof target === 'object' && target !== null && target.is$Element()))
-      throw $.$$throw($.CTC23);
+      throw $.$$throw($.CTC19);
     return $.sub(this.clientX, this.get$target().getBoundingClientRect$0().get$left());
   }
 },
@@ -9953,7 +9972,7 @@ $.$defineNativeClass('MouseEvent', ["x?", "y?"], {
   else {
     var target = this.get$target();
     if (!(typeof target === 'object' && target !== null && target.is$Element()))
-      throw $.$$throw($.CTC23);
+      throw $.$$throw($.CTC19);
     return $.sub(this.clientY, this.get$target().getBoundingClientRect$0().get$top());
   }
 },
@@ -10084,7 +10103,7 @@ $.$defineNativeClass('NodeIterator', [], {
 }
 });
 
-$.$defineNativeClass('NodeList', ["_parent?", "length?"], {
+$.$defineNativeClass('NodeList', ["length?"], {
  iterator$0: function() {
   return $._FixedSizeListIterator$(this);
 },
