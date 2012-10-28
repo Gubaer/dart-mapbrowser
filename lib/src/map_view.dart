@@ -70,7 +70,7 @@ class MapView {
          return;
        }
        deferredEvent = event;
-       window.setTimeout(() => _fireDeferred(), 200);
+       window.setTimeout(() => _fireDeferred(), 100);
      } else {
        deferredEvent = null;
        onDoubleClick(event);
@@ -293,8 +293,8 @@ class MapView {
   
   /* -------------------------------------------------------------------------------------- */
   _panMoveTo(x,y,dx, dy) {
-    var sx = dx ~/ 5;
-    var sy = dy ~/ 5;
+    var sx = dx ~/ 10;
+    var sy = dy ~/ 10;
     
     makeRenderer(lat,lon) {
       return () {
@@ -302,7 +302,7 @@ class MapView {
         render();
       };
     }
-    for (int i=1; i<=5; i++ ) {
+    for (int i=1; i<=10; i++ ) {
       var nx =  x + i * sx;
       if (dx > 0) nx =  min(x + dx, nx);
       else if (dx < 0) nx = max(x + dx, nx);
@@ -346,28 +346,80 @@ class MapView {
     var y = tc.tilePlaneY(this._tilesource);
     _panMoveTo(x,y,-200,0);
   }
+  
+  setPointerCursor() => _layer1.style.cursor = "pointer";
+  setDefaultCursor() => _layer1.style.cursor = "default";
 }
 
-class Rectangle {
-   int x,y,width, height;
-   bool mouseOver = false;
-   Rectangle(this.x, this.y, this.width, this.height);
+class RectangularArea {
+  int x,y, width, height;
+  RectangularArea(this.x, this.y, this.width, this.height);
+  
+  translate(dx, dy) {
+    return new RectangularArea(x + dx, y + dy, width, height);
+  }
+  
+  isInside(p) {
+    return p.x >= this.x && p.x < this.x + this.width
+        && p.y >= this.y && p.y <  this.y + this.height;
+  }
+    
+  MyPoint get center =>  new MyPoint (x + width ~/ 2, y + height ~/ 2);
+}
+
+class RespondingRectangularArea extends RectangularArea {
+  var onEnter;
+  var onExit;
+  var mouseOver = false;
+  RespondingRectangularArea(int x, int y, int width, int height, {onEnter:null, onExit:null}) : super(x,y,width,height) {
+    this.onEnter = onEnter;
+    this.onExit = onExit;
+  }
+  
+  onMouseMove(p) {
+    var inside = isInside(p);
+    if (inside && !mouseOver) {
+       if (onEnter != null) onEnter();
+       mouseOver = true;
+    } else if (!inside && mouseOver) {
+      if (onExit != null) onExit();
+      mouseOver = false;
+    }
+  }
+}
+
+class ZoomNob extends RespondingRectangularArea{
+   MapView parent;
+   ZoomNob(parent, int x, int y, int width, int height) 
+      : super(x,y,width, height, onEnter: parent.setPointerCursor, onExit: parent.setDefaultCursor) {
+      this.parent = parent;     
+   }
+   
+   ZoomNob.other(parent, RectangularArea r) : this(parent, r.x, r.y, r.width, r.height);
    
    render(CanvasRenderingContext2D ctx) {
+     var shadow = translate(3, 3);
+     ctx.setFillColorRgb(120, 120, 120);
+     ctx.lineWidth = 0;
+     _renderRect(ctx, shadow);
+     ctx.setFillColorRgb(255,255,255); 
+     ctx.lineWidth = 1;
+     ctx.strokeStyle = "rgb(50,50,50)";
+     ctx.lineWidth = 1;
+     _renderRect(ctx,this);
+   }
+   
+   _renderRect(CanvasRenderingContext2D ctx, RectangularArea r) {
      ctx.beginPath();
-     ctx.moveTo(x, y);
-     ctx.lineTo(x+width, y);
-     ctx.lineTo(x+width, y+height);
-     ctx.lineTo(x, y+height);
+     ctx.moveTo(r.x, r.y);
+     ctx.lineTo(r.x+r.width, r.y);
+     ctx.lineTo(r.x+r.width, r.y+r.height);
+     ctx.lineTo(r.x, r.y+r.height);
      ctx.closePath();
      ctx.stroke();
      ctx.fill();
    }
-   
-   Rectangle translate(dx, dy) {
-     return new Rectangle(x + dx, y + dy, width, height);
-   }
-   
+        
    renderPlus(CanvasRenderingContext2D ctx) {
      ctx
        ..strokeStyle = "rgb(100,100,100)"
@@ -399,36 +451,18 @@ class Rectangle {
       ..lineTo(x + 15, y + 10)
       ..stroke();
    }
-   
-   isInside(x,y) {
-     return x >= this.x && x < this.x + this.width
-         && y >= this.y && y <  this.y + this.height;
-   }
-   
-   onMouseMove(p, setCursor) {
-     var inside = isInside(p.x,p.y);
-     if (inside && ! mouseOver) {
-       setCursor("pointer");
-       mouseOver = true;
-     } else if (!inside && mouseOver) {
-       setCursor("default");
-       mouseOver = false;
-     }
-   }   
-   
-   MyPoint get center =>  new MyPoint (x + width ~/ 2, y + height ~/ 2);
 }
 
 class ZoomSlider {
   
   MapView _parent;
   
-  Rectangle plus;
-  Rectangle minus;
+  ZoomNob plus;
+  ZoomNob minus;
   
   ZoomSlider(this._parent) {
-    plus = new Rectangle(30,90,20,20);
-    minus = plus.translate(0, 200);    
+    plus = new ZoomNob(_parent,30,90,20,20);
+    minus = new ZoomNob.other(_parent, plus.translate(0, 200));    
   }
   
   _renderZoomNob(ctx, r) {
@@ -458,41 +492,42 @@ class ZoomSlider {
     var ctx = _parent.layer1.context2d;
     ctx.save();    
     _renderZoomSlider(ctx);
-    _renderZoomNob(ctx, plus);
+    plus.render(ctx);
     plus.renderPlus(ctx);
-    _renderZoomNob(ctx, minus);
+    minus.render(ctx);
     minus.renderMinus(ctx);
     ctx.restore();
   }
   
   onMouseMove(event) {
-    setCursor(name) => _parent.layer1.style.cursor = name;
     var p = _parent.layerXY(event);
-    plus.onMouseMove(p, setCursor);
-    minus.onMouseMove(p, setCursor);
+    plus.onMouseMove(p);
+    minus.onMouseMove(p);
   }
   
   onClick(event) {
     var p = _parent.layerXY(event);
-    if (plus.isInside(p.x,p.y)) _parent.zoomIn();
-    else if (minus.isInside(p.x, p.y)) _parent.zoomOut();
+    if (plus.isInside(p)) _parent.zoomIn();
+    else if (minus.isInside(p)) _parent.zoomOut();
   }
 }
 
 class PanNavigator {
   static const RADIUS = 25;
-  static const UP = const [35, 20, 10, 5];
-  static const RIGHT= const [55, 35, 5, 10];
-  static const LEFT= const [20, 35, 5, 10];
-  static const DOWN= const [35, 55, 10, 5];
-    
-  
+      
+  var up, right, down, left; 
+   
   int _x;
   int _y; 
   MapView _parent;
   bool _mouseOver = false;
   
-  PanNavigator(MapView this._parent, this._x, this._y);
+  PanNavigator(MapView this._parent, this._x, this._y) {
+    up = new RespondingRectangularArea(35, 20, 10, 5, onEnter: _parent.setPointerCursor, onExit: _parent.setDefaultCursor);
+    right = new RespondingRectangularArea(55, 35, 5, 10, onEnter: _parent.setPointerCursor, onExit: _parent.setDefaultCursor);
+    left= new RespondingRectangularArea(20, 35, 5, 10,onEnter: _parent.setPointerCursor, onExit: _parent.setDefaultCursor);
+    down= new RespondingRectangularArea(35, 55, 10, 5,onEnter: _parent.setPointerCursor, onExit: _parent.setDefaultCursor);
+  }
   
   render() {
     var ctx = _parent.layer1.context2d;
@@ -529,36 +564,35 @@ class PanNavigator {
     ctx.restore();
   }
   
-  bool _hit(event) {
+  bool isInside(event) {
     var p = _parent.layerXY(event);
     var dist = sqrt(pow(_x - p.x, 2) + pow(_y - p.y, 2));
     return dist <= RADIUS;
   }
   
-  bool _hitNavRow(x,y, rect) {
-    return x >= rect[0] && x < rect[0] + rect[2]
-      && y >= rect[1] && y < rect[1] + rect[3];
-  }
-  
   onMouseMove(event) {
-    var hit = _hit(event);
+    var hit = isInside(event);
+    var p = _parent.layerXY(event);
     if (hit && !_mouseOver) {
       _mouseOver = true;
       render();
     } else if (!hit && _mouseOver) {
       _mouseOver = false;
       render();
-    } 
+    }  
+    up.onMouseMove(p);
+    right.onMouseMove(p);
+    down.onMouseMove(p);
+    left.onMouseMove(p);
   }
   
   onClick(event) {
     MyPoint p = _parent.layerXY(event);
-    if (_hitNavRow(p.x, p.y, UP)) _parent.panUp();
-    else if (_hitNavRow(p.x,p.y,RIGHT)) _parent.panRight();
-    else if (_hitNavRow(p.x,p.y,DOWN)) _parent.panDown();
-    else if (_hitNavRow(p.x,p.y,LEFT)) _parent.panLeft();
-  }
- 
+    if (up.isInside(p)) _parent.panUp();
+    else if (right.isInside(p)) _parent.panRight();
+    else if (down.isInside(p)) _parent.panDown();
+    else if (left.isInside(p)) _parent.panLeft();
+  } 
 }
 
 class MyPoint {
