@@ -12,7 +12,7 @@ class Tile {
   final int tj;
   final TileSource source;
   var _image;
-  var _context;
+  var _layer;
   var _state = LOADING;
   int _x;
   int _y;
@@ -27,17 +27,16 @@ class Tile {
   
   /// attaches the graphics [context] the tile is rendered to. Renders itself
   /// at the position ([x],[y]).
-  attach(context,int x, int y) {
-    this._context = context;
+  attach(Layer layer,int x, int y) {
+    this._layer = layer;
     this._x = x;
     this._y = y;
     load();
   }
   
-  /// detaches the graphics context the tile is rendered to. Doesn't render
-  /// itself unless a graphics context is attached.
-  detach() => this._context = null;
-  bool get attached => this._context != null;
+  /// detaches the tile from a layer
+  detach() => this._layer = null;
+  bool get isAttached => this._layer != null;
   
   /// the tile url for this tile
   String get url => source.buildTileUrl(ti, tj, zoom);
@@ -67,25 +66,35 @@ class Tile {
         ..load.add(this._onLoad);
       _state = LOADING;
     }
-    render();
+    if (_layer != null) {
+      render();
+      _layer.repaint();
+    }
    }
   
   _onError(event) {    
     _state = ERROR;
     _removeListeners();
     render();
+    if (_layer != null) {
+      render();
+      _layer.repaint();     
+    }
   }
   
   _onLoad(event) {
     _state = READY;
     _removeListeners();
     ImageCache.instance.remember(url, _image);
-    render();
+    if (_layer != null) {
+      render();
+      _layer.repaint();
+    }
   }
   
   /// renders the tile. Attach the tile first to a canvas context, see attach()
   render() {
-    if (!attached) return;
+    if (!isAttached) return;
     switch(this._state) {
       case LOADING: _renderLoading(); break;
       case READY: _renderReady(); break;
@@ -99,16 +108,17 @@ class Tile {
      if (p != null){
        pimage = ImageCache.instance.lookup(p.url);
      }
-     if (pimage == null) {       
-       this._context.setFillColorRgb(255, 255, 255, 255); // white
-       this._context.fillRect(_x, _y, source.tileWidth, source.tileHeight);
+     if (pimage == null) {
+       _layer.gc
+          ..setFillColorRgb(255, 255, 255, 255) // white
+          ..fillRect(_x, _y, source.tileWidth, source.tileHeight);
      } else {
        var tw = source.tileWidth ~/ 2;
        var th = source.tileHeight ~/ 2;
        var tx = 0, ty = 0;
        if (ti % 2 == 1) tx = tw;
        if (tj % 2 == 1) ty = th;
-       this._context.drawImage(pimage, 
+       _layer.gc.drawImage(pimage, 
          /* take section from parent image .. */ tx, ty,tw,th, 
          /* ... and draw onto tile space      */ _x, _y, source.tileWidth, source.tileHeight
        );
@@ -116,11 +126,12 @@ class Tile {
   }
   
   _renderReady() {
-    this._context.drawImage(_image, _x, _y);
+    _layer.gc.drawImage(_image, _x, _y);
   }
   
   _renderError() {
-    this._context.setFillColorRgb(255, 0, 0, 255); // red
-    this._context.fillRect(_x, _y, source.tileWidth, source.tileHeight);
+    _layer.gc
+      ..setFillColorRgb(255, 0, 0, 255) // red
+      ..fillRect(_x, _y, source.tileWidth, source.tileHeight);
   }
 }

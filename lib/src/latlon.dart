@@ -22,5 +22,8 @@ class LatLon {
   double get lon => _lon;
   
   String toString() => "{LatLon: lat: ${_lat}, lon: ${_lon}}";
- 
+  
+  LatLon translate(double dlat, double dlon) {
+    return new LatLon(_lat + dlat, _lon + dlon);
+  }
 }
