@@ -151,8 +151,43 @@ class Tile {
   }
   
   _renderError() {
+    _layer.gc.save();
+
     _layer.gc
-      ..setFillColorRgb(255, 0, 0, 255) // red
+      ..setFillColorRgb(250, 200, 207) // red
       ..fillRect(_x, _y, source.tileWidth, source.tileHeight);
+        
+    // filled red circle in the center 
+    _layer.gc
+      ..translate(center.x, center.y)
+      ..beginPath()
+      ..arc(0,0, 20, 0, 2 * PI, false)
+      ..closePath()
+      ..fillStyle = 'rgb(250,5,17)'
+      ..lineWidth=0
+      ..fill();  
+    
+    _layer.gc
+      ..lineWidth = 3
+      ..lineCap = "round"
+      ..strokeStyle = "rgb(255,255,255)";
+    
+    // paint the first leg of the "x"
+    _layer.gc
+      ..beginPath()
+      ..moveTo(-5,5)
+      ..lineTo(5,-5)
+      ..closePath()
+      ..stroke();
+    
+    // paint the second leg     
+    _layer.gc
+      ..beginPath()
+      ..moveTo(-5, -5)
+      ..lineTo(5, 5)
+      ..closePath()
+      ..stroke();
+    
+   _layer.gc.restore();  
   }
 }
