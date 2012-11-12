@@ -44,7 +44,7 @@ abstract class Layer {
   
   /// implement in sub classes. Renders the layer in its offscreen
   /// buffer 
-  abstract render();
+  render();
   
   onMouseDown(event){}
   onMouseUp(event){}
