@@ -2,6 +2,7 @@ library mapbrowser;
 
 import "dart:html";
 import "dart:math";
+import "dart:isolate";
 
 
 part "src/tile_source.dart";

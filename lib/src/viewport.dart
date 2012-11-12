@@ -223,15 +223,12 @@ class Viewport {
     if (draggingLayer != null) draggingLayer.onMouseDrag(event);
   }
   
-  
   /* -----------------------------------------  paning -------------------------------- */ 
   _abs(x) =>  x < 0 ? -x : x;
   _animatePanToNewPos(LatLon pos) {
-    createAnimationStep(pos) {
-      return () {
-        center = pos; render();
-      };
-    }
+    
+    createAnimationStep(toPos) => (timer){center = toPos; render();};
+    
     double deltalat = _abs(_center.lat - pos.lat);
     double deltalon = _abs(_center.lon - pos.lon);
     if (pos.lat < _center.lat) deltalat *= -1;
@@ -239,20 +236,16 @@ class Viewport {
     var steps = 5;
     for(int i = 1; i< steps; i++) {
       var ll = _center.translate(deltalat / steps * i, deltalon / steps * i);
-      window.setTimeout(
-          createAnimationStep(ll),
-          50 * i   
-      );
+      new Timer(50*i, createAnimationStep(ll));
     }
-    window.setTimeout(
-        createAnimationStep(pos),
-        50 * steps
-    );
+    new Timer(50 * steps, createAnimationStep(pos));
   }
   
   int get _vpmax_x => (1 << _zoom) * 200;
   int get _vpmax_y => (1 << _zoom) * 200;
   
+  /// project [pos] onto viewport coordinates. 
+  //FIXME: can't have Point as return type. Leads to runtime errors. 
   dynamic latlon2viewport(LatLon pos) {
     var zz = (1 << _zoom);
     int x = ((pos.lon + 180) / 360 * _vpmax_x).floor().toInt();
@@ -260,6 +253,7 @@ class Viewport {
     return new Point(x,y);
   }
  
+  /// reverse projection of [p] to lat/lon coordinates
   LatLon viewport2latlon(Point p) {
     var zz = (1 << _zoom);
     double lon = p.x/_vpmax_x * 360-180;    
