@@ -102,6 +102,28 @@ class Tile {
     }
   }
   
+  dynamic get center => new Point(_x + source.tileWidth ~/ 2, _y + source.tileHeight ~/ 2);
+  
+  _renderLoadingProgress(step) {
+    if (!isAttached) return;
+    if (this._state != LOADING) return;
+    step = step % 16;
+    var gc = _layer.gc;
+    if (step == 0) {
+       gc.setFillColorRgb(255, 255, 255, 255);  // white
+       gc.fillRect(_x, _y, source.tileWidth, source.tileHeight);
+    }
+    gc.save();
+    gc.translate(center.x, center.y);
+    gc.rotate(step == 0 ? 0 : 2 * PI / 16 * step + PI);
+    var color = 255 - (255 ~/ 16 * step);
+    gc.setFillColorRgb(color, color, color, 0.8);
+    gc.fillRect(-5, 0, 10, 40);
+    gc.restore();
+    _layer.repaint();
+    new Timer(200, ((next) => (timer) => _renderLoadingProgress(next))(step + 1));
+  }
+  
   _renderLoading() {
      var p = parent;
      var pimage = null;
@@ -109,9 +131,8 @@ class Tile {
        pimage = ImageCache.instance.lookup(p.url);
      }
      if (pimage == null) {
-       _layer.gc
-          ..setFillColorRgb(255, 255, 255, 255) // white
-          ..fillRect(_x, _y, source.tileWidth, source.tileHeight);
+       // start progress animation
+       new Timer(200, (timer) => _renderLoadingProgress(0));
      } else {
        var tw = source.tileWidth ~/ 2;
        var th = source.tileHeight ~/ 2;
