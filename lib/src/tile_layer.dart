@@ -67,6 +67,10 @@ class TileLayer extends Layer {
       }
     }
   }
+  
+  int get _zoom => _viewport.zoom;
+  int get max_ti =>  (1 << _zoom) - 1;
+  int get max_tj =>  (1 << _zoom) - 1;
     
   _renderIfTileDoesntFitIntoViewPort() {
     var coor  = tileCoordinates(_viewport.center.lat, _viewport.center.lon, _viewport.zoom);
@@ -79,13 +83,24 @@ class TileLayer extends Layer {
     int x0 = x, y0 = y, ti0 = ti, tj0 = tj;
     while(y < height) {
       while(x < width) {
-        Tile tile = new Tile(_viewport.zoom, ti, tj, _tilesource);
-        tile.attach(this, x, y);
-        _tiles.add(tile);
+        if (ti <= max_ti && tj <= max_tj) {
+          Tile tile = new Tile(_viewport.zoom, ti, tj, _tilesource);
+          tile.attach(this, x, y);
+          _tiles.add(tile);
+        }
         x+=_tilesource.tileWidth;ti++;
       }
       x=x0; ti=ti0;y+=_tilesource.tileHeight;tj++;
     }
+  }
+  
+  _renderNoSuchZoomLevel() {
+    gc
+      ..font = '14pt Calibri'
+      ..textAlign = 'center'
+      ..textBaseline = 'middle'
+      ..fillStyle = 'rgb(180,180,180)'
+      ..fillText("No map tiles at this zoom level.", width ~/ 2 , height ~/ 2);       
   }
   
   render() {    
@@ -96,14 +111,7 @@ class TileLayer extends Layer {
     _tiles = [];
     
     if (viewport.zoom > _tilesource.zoomLevels) {
-       var x= width ~/ 2;
-       var y = height ~/ 2;
-       gc.font = '14pt Calibri';
-       gc.textAlign = 'center';
-       gc.textBaseline = 'middle';
-       gc.fillStyle = 'rgb(180,180,180)';
-       gc.fillText("No map tiles at this zoom level.", x,y);       
-       return;
+      _renderNoSuchZoomLevel();
     }
     
     // render the tiles
@@ -140,11 +148,16 @@ class TileLayer extends Layer {
   }
   
   onMouseDrag(event) {
-    Point p = new Point(event.offsetX, event.offsetY);
-    
+    Point p = new Point.offset(event);    
     var tc = tileCoordinates(_dragCenter.lat, _dragCenter.lon, _viewport.zoom);
     int tx = tc.tilePlaneX() - (p.x - _dragStart.x);    
     int ty = tc.tilePlaneY() - (p.y - _dragStart.y);
+    if (! tilePlaneFitsIntoViewport) {
+      tx = max(_viewport.width ~/ 2, tx);
+      ty = max(_viewport.height ~/ 2, ty);
+      tx = min(tilePlaneWidth - _viewport.width ~/ 2, tx);
+      ty = min(tilePlaneHeight - _viewport.height ~/ 2, ty);
+    }
     double lon = tx/tilePlaneWidth * 360-180;    
     var n = PI-2*PI*ty/tilePlaneHeight;
     double lat = (180/PI* atan(0.5*(exp(n)-exp(-n)))); 
