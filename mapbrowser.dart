@@ -3,6 +3,7 @@ import "dart:html";
 
 main() {
   var viewport = new Viewport(query("#viewport"));
+  viewport.zoomTo(1);
   var tiles = new TileLayer(viewport);  
   var controls = new ControlLayer(viewport);
   controls.addPanListener(viewport.onPan);
