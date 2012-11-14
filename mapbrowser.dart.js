@@ -1695,7 +1695,7 @@ $$.TileLayer = {"":
   this._dragStart = $.Point$offset(event$);
   var t1 = this._viewport;
   this._dragCenter = $.LatLon$clone(t1.get$center());
-  t1.setCursor$1('move');
+  t1.set$cursor('move');
 },
  onMouseDrag$1: function(event$) {
   var p = $.Point$offset(event$);
@@ -1725,7 +1725,7 @@ $$.TileLayer = {"":
  onDragEnd$1: function(event$) {
   this._dragStart = null;
   this._dragCenter = null;
-  this._viewport.setCursor$1('default');
+  this._viewport.set$cursor('default');
 },
  TileLayer$2: function(viewport, tilesource) {
   this._tilesource = tilesource == null ? $.TileSource$(256, 256, 'http://a.tile.openstreetmap.org/$zoom/$x/$y.png', 18) : tilesource;
@@ -1755,7 +1755,7 @@ $$.Viewport = {"":
  addLayer$1: function(layer) {
   this._layers.push(layer);
 },
- setCursor$1: function(name$) {
+ set$cursor: function(name$) {
   this._canvas.get$style().set$cursor(name$);
 },
  repaint$0: function() {
@@ -1814,13 +1814,15 @@ $$.Viewport = {"":
  _rawMouseDown$1: function(event$) {
   this._mouseDown = true;
   this._lastMouseDownTimestamp = $.Date_Date$now().get$millisecondsSinceEpoch();
-  this._lastMouseDownPos = $.Point$(event$.get$offsetX(), event$.get$offsetY());
+  this._lastMouseDownPos = $.Point$offset(event$);
+  $.callTypeCast(event$, 'is$MouseEvent').preventDefault$0();
 },
  _rawMouseUp$1: function(event$) {
   if (this._isDragging)
     this.onDragEnd$1(event$);
   this._mouseDown = false;
   this._isDragging = false;
+  $.callTypeCast(event$, 'is$MouseEvent').preventDefault$0();
 },
  _rawMouseMove$1: function(event$) {
   if (this._mouseDown) {
@@ -1832,6 +1834,7 @@ $$.Viewport = {"":
     this.onMouseDrag$1(event$);
   else
     this.onMouseMove$1(event$);
+  $.callTypeCast(event$, 'is$MouseEvent').preventDefault$0();
 },
  _fireDeferred$0: function() {
   var t1 = this.deferredEvent;
@@ -1845,11 +1848,12 @@ $$.Viewport = {"":
     if ($.gtB($.sub($.Date_Date$now().get$millisecondsSinceEpoch(), this._lastMouseDownTimestamp), 150))
       return;
     this.deferredEvent = event$;
-    $.window().setTimeout$2(new $.Viewport__rawMouseClick_anon(this), 200);
+    $.Timer_Timer(200, new $.Viewport__rawMouseClick_anon(this));
   } else {
     this.deferredEvent = null;
     this.onDoubleClick$1(event$);
   }
+  $.callTypeCast(event$, 'is$MouseEvent').preventDefault$0();
 },
  _wireListeners$0: function() {
   var t1 = this._canvas.get$on();
@@ -1905,13 +1909,13 @@ $$.Viewport = {"":
   var deltalat = this._abs$1($.sub(this._center.get$lat(), pos.get$lat()));
   var deltalon = this._abs$1($.sub(this._center.get$lon(), pos.get$lon()));
   if ($.ltB(pos.get$lat(), this._center.get$lat()))
-    deltalat = $.mul(deltalat, -1);
+    deltalat = $.neg(deltalat);
   if (typeof deltalat !== 'number')
-    return this._animatePanToNewPos$1$bailout(1, deltalat, pos, t1, deltalon);
+    return this._animatePanToNewPos$1$bailout(1, pos, t1, deltalat, deltalon);
   if ($.ltB(pos.get$lon(), this._center.get$lon()))
-    deltalon = $.mul(deltalon, -1);
+    deltalon = $.neg(deltalon);
   if (typeof deltalon !== 'number')
-    return this._animatePanToNewPos$1$bailout(2, deltalat, pos, t1, deltalon);
+    return this._animatePanToNewPos$1$bailout(2, pos, deltalon, t1, deltalat);
   for (var t2 = deltalat / 5, t3 = deltalon / 5, i = 1; i < 5; ++i) {
     var ll = this._center.translate$2(t2 * i, t3 * i);
     $.Timer_Timer(50 * i, t1.call$1(ll));
@@ -1921,16 +1925,16 @@ $$.Viewport = {"":
  _animatePanToNewPos$1$bailout: function(state0, env0, env1, env2, env3) {
   switch (state0) {
     case 1:
-      deltalat = env0;
-      var pos = env1;
-      t1 = env2;
+      var pos = env0;
+      t1 = env1;
+      deltalat = env2;
       deltalon = env3;
       break;
     case 2:
-      deltalat = env0;
-      pos = env1;
+      pos = env0;
+      deltalon = env1;
       t1 = env2;
-      deltalon = env3;
+      deltalat = env3;
       break;
   }
   switch (state0) {
@@ -1939,11 +1943,11 @@ $$.Viewport = {"":
       var deltalat = this._abs$1($.sub(this._center.get$lat(), pos.get$lat()));
       var deltalon = this._abs$1($.sub(this._center.get$lon(), pos.get$lon()));
       if ($.ltB(pos.get$lat(), this._center.get$lat()))
-        deltalat = $.mul(deltalat, -1);
+        deltalat = $.neg(deltalat);
     case 1:
       state0 = 0;
       if ($.ltB(pos.get$lon(), this._center.get$lon()))
-        deltalon = $.mul(deltalon, -1);
+        deltalon = $.neg(deltalon);
     case 2:
       state0 = 0;
       for (var i = 1; i < 5; ++i) {
@@ -2158,7 +2162,7 @@ $$.FeedbackRectangle = {"":
   var v = this._layer.get$viewport();
   if (v == null)
     return;
-  v.setCursor$1(name$);
+  v.set$cursor(name$);
 },
  onMouseMove$1: function(p) {
   var t1 = this.isInside$1(p) === true;
@@ -4368,7 +4372,7 @@ $$.Viewport_onMouseWheel_anon = {"":
 $$.Viewport__rawMouseClick_anon = {"":
  ["this_0"],
  "super": "Closure",
- call$0: function() {
+ call$1: function(timer) {
   return this.this_0._fireDeferred$0();
 }
 };
@@ -7560,6 +7564,7 @@ $.$defineNativeClass = function(cls, fields, methods) {
     $.defineProperty(Object.prototype, key, table[key]);
   }
 })({
+ is$MouseEvent: function() { return false; },
  is$_FileImpl: function() { return false; },
  is$Element: function() { return false; },
  is$_ImageDataImpl: function() { return false; },
@@ -9378,7 +9383,8 @@ return this.offsetX
 },
  get$_offsetY: function() {
 return this.offsetY
-}
+},
+ is$MouseEvent: function() { return true; }
 });
 
 $.$defineNativeClass('NamedNodeMap', ["length?"], {
@@ -11254,7 +11260,8 @@ return this.wheelDelta
 },
  get$_detail: function() {
 return this.detail
-}
+},
+ is$MouseEvent: function() { return true; }
 });
 
 $.$defineNativeClass('WorkerContext', ["navigator?"], {
