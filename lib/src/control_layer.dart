@@ -107,7 +107,7 @@ class FeedbackRectangle extends Rectangle {
   _setCursor(name) {
     Viewport v = _layer.viewport;
     if (v== null) return;
-    v.setCursor(name);
+    v.cursor = name;
   }
   
   onMouseMove(p) {

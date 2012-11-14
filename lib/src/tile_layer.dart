@@ -144,7 +144,7 @@ class TileLayer extends Layer {
   onDragStart(event) {
     _dragStart = new Point.offset(event);
     _dragCenter = new LatLon.clone(_viewport.center);
-    _viewport.setCursor("move");
+    _viewport.cursor = "move";
   }
   
   onMouseDrag(event) {
@@ -168,6 +168,6 @@ class TileLayer extends Layer {
   onDragEnd(event) {
     _dragStart = null;
     _dragCenter = null;
-    _viewport.setCursor("default");
+    _viewport.cursor = "default";
   }  
 }

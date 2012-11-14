@@ -45,9 +45,8 @@ class Viewport {
     _layers.add(layer);
   }
   
-  /// sets the cursor with name [name] on this viewport 
-  setCursor(name) {
-    _canvas.style.cursor = name;
+  set cursor(String name) {
+    _canvas.style.cursor = name; 
   }
   
   /// request to repaint the canvas
@@ -134,13 +133,15 @@ class Viewport {
   _rawMouseDown(event) {
     _mouseDown = true;
     _lastMouseDownTimestamp = new Date.now().millisecondsSinceEpoch;
-    _lastMouseDownPos = new Point(event.offsetX, event.offsetY);
+    _lastMouseDownPos = new Point.offset(event);
+    (event as MouseEvent).preventDefault();
   }
   
   _rawMouseUp(event) {
     if (_isDragging) onDragEnd(event);
     _mouseDown = false;
     _isDragging = false; 
+    (event as MouseEvent).preventDefault();
   }
   
   _rawMouseMove(event){
@@ -153,6 +154,7 @@ class Viewport {
     } else {
       onMouseMove(event);
     }
+    (event as MouseEvent).preventDefault();
   }
   
    var deferredEvent = null;
@@ -175,11 +177,12 @@ class Viewport {
          return;
        }
        deferredEvent = event;
-       window.setTimeout(() => _fireDeferred(), 200);
+       new Timer(200, (timer) => _fireDeferred());
      } else {
        deferredEvent = null;
        onDoubleClick(event);
      }
+     (event as MouseEvent).preventDefault();
   }
   
   _wireListeners() {
@@ -193,8 +196,7 @@ class Viewport {
   
   onClick(event) => _layers.forEach((layer) => layer.onClick(event));
   onDoubleClick(event) => _layers.forEach((layer) => layer.onDoubleClick(event));
-  onMouseMove(event) => _layers.forEach((layer) => layer.onMouseMove(event));
-  
+  onMouseMove(event) => _layers.forEach((layer) => layer.onMouseMove(event));  
   onMouseWheel(event) => _layers.forEach((layer) => layer.onMouseWheel(event));
  
   
@@ -231,8 +233,8 @@ class Viewport {
     
     double deltalat = _abs(_center.lat - pos.lat);
     double deltalon = _abs(_center.lon - pos.lon);
-    if (pos.lat < _center.lat) deltalat *= -1;
-    if (pos.lon < _center.lon) deltalon *= -1;
+    if (pos.lat < _center.lat) deltalat = -deltalat;
+    if (pos.lon < _center.lon) deltalon = -deltalon;
     var steps = 5;
     for(int i = 1; i< steps; i++) {
       var ll = _center.translate(deltalat / steps * i, deltalon / steps * i);
