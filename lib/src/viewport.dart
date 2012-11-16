@@ -120,7 +120,6 @@ class Viewport {
     _zoomlisteners.forEach((notifyChanged) => notifyChanged(oldValue, newValue));
   }
   
-
   /* -------------------------------- raw mouse handling -------------------------------- */
   var _lastMouseDownTimestamp = 0;
   var _lastMouseDownPos = null;

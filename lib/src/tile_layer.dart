@@ -139,6 +139,10 @@ class TileLayer extends Layer {
   // why??
   //Point _dragStart = null;  
   var _dragStart = null;
+  var _dragLast = null;
+  var _dragLastTimestamp = null;
+  var _dragDirection = null;
+  double _dragVelocity = 0.0;
   LatLon _dragCenter = null;  
 
   onDragStart(event) {
@@ -149,9 +153,23 @@ class TileLayer extends Layer {
   
   onMouseDrag(event) {
     Point p = new Point.offset(event);    
-    var tc = tileCoordinates(_dragCenter.lat, _dragCenter.lon, _viewport.zoom);
-    int tx = tc.tilePlaneX() - (p.x - _dragStart.x);    
-    int ty = tc.tilePlaneY() - (p.y - _dragStart.y);
+    if (_dragLast != null) {
+      var dist = _dragLast.distance(p);
+      int dt = event.timeStamp - _dragLastTimestamp;
+      _dragVelocity = dt > 0 ? dist / dt : 0.0;
+      _dragDirection = (p - _dragLast).theta;
+    }
+    _dragLast = new Point.clone(p);
+    _dragLastTimestamp = event.timeStamp;
+    
+    _pan(_dragCenter, _dragStart.x - p.x, _dragStart.y - p.y);    
+    render();
+  }  
+  
+  _pan(LatLon relativeTo, dx, dy) {
+    var tc = tileCoordinates(relativeTo.lat, relativeTo.lon, _viewport.zoom);
+    int tx = tc.tilePlaneX() + dx;    
+    int ty = tc.tilePlaneY() + dy;
     if (! tilePlaneFitsIntoViewport) {
       tx = max(_viewport.width ~/ 2, tx);
       ty = max(_viewport.height ~/ 2, ty);
@@ -162,12 +180,27 @@ class TileLayer extends Layer {
     var n = PI-2*PI*ty/tilePlaneHeight;
     double lat = (180/PI* atan(0.5*(exp(n)-exp(-n)))); 
     _viewport.center = new LatLon(lat,lon);
-    render();
-  }  
+  }
   
-  onDragEnd(event) {
-    _dragStart = null;
-    _dragCenter = null;
+  onDragEnd(event) {    
     _viewport.cursor = "default";
+    
+    createAnimationStep(delta) => (timer){
+      _pan(_viewport.center, -delta.x, -delta.y);
+      render();
+    };
+    Point p = new Point.offset(event); 
+    if (_dragLast == null || _dragLastTimestamp == null) return;
+    var v = _dragVelocity;
+    var delay = 50;
+    while(v > 0){
+      var dist = v * 50;              /* dist = v * t */
+      var next = new Point.polar(dist, _dragDirection);
+      v -= 0.3;                      /* v = a * t */
+      new Timer(delay, createAnimationStep(next));
+      delay += 50;
+    }
+    _dragStart = null;
+    _dragCenter = null;    
   }  
 }
