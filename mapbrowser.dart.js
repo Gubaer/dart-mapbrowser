@@ -1354,7 +1354,7 @@ $$.LatLon = {"":
 };
 
 $$.Layer = {"":
- [],
+ ["_viewport?"],
  "super": "Object",
  get$width: function() {
   return this._canvas.get$width();
@@ -1409,7 +1409,7 @@ $$.Layer = {"":
 };
 
 $$.TileLayer = {"":
- ["_tilesource", "_tiles", "_dragStart", "_dragCenter", "_canvas", "_viewport"],
+ ["_tilesource", "_tiles", "_dragStart", "_dragLast", "_dragLastTimestamp", "_dragDirection", "_dragVelocity", "_dragCenter", "_canvas", "_viewport"],
  "super": "Layer",
  get$tilePlaneWidth: function() {
   var t1 = this._viewport.get$zoom();
@@ -1699,12 +1699,25 @@ $$.TileLayer = {"":
 },
  onMouseDrag$1: function(event$) {
   var p = $.Point$offset(event$);
-  var t1 = this._dragCenter.get$lat();
-  var t2 = this._dragCenter.get$lon();
+  var t1 = this._dragLast;
+  if (!(t1 == null)) {
+    var dist = t1.distance$1(p);
+    var dt = $.sub(event$.get$timeStamp(), this._dragLastTimestamp);
+    this._dragVelocity = $.gtB(dt, 0) ? $.div(dist, dt) : 0;
+    this._dragDirection = p.operator$sub$1(this._dragLast).get$theta();
+  }
+  this._dragLast = $.Point$clone(p);
+  this._dragLastTimestamp = event$.get$timeStamp();
+  this._pan$3(this._dragCenter, $.sub(this._dragStart.get$x(), p.x), $.sub(this._dragStart.get$y(), p.y));
+  this.render$0();
+},
+ _pan$3: function(relativeTo, dx, dy) {
+  var t1 = relativeTo.get$lat();
+  var t2 = relativeTo.get$lon();
   var t3 = this._viewport;
   var tc = this.tileCoordinates$3(t1, t2, t3.get$zoom());
-  var tx = $.sub(tc.tilePlaneX$0(), $.sub(p.x, this._dragStart.get$x()));
-  var ty = $.sub(tc.tilePlaneY$0(), $.sub(p.y, this._dragStart.get$y()));
+  var tx = $.add(tc.tilePlaneX$0(), dx);
+  var ty = $.add(tc.tilePlaneY$0(), dy);
   if (this.get$tilePlaneFitsIntoViewport() !== true) {
     tx = $.max($.tdiv(t3.get$width(), 2), tx);
     ty = $.max($.tdiv(t3.get$height(), 2), ty);
@@ -1720,12 +1733,34 @@ $$.TileLayer = {"":
     throw $.iae(t2);
   var n = 3.141592653589793 - t1 / t2;
   t3.set$center($.LatLon$(57.29577951308232 * $.atan(0.5 * ($.exp(n) - $.exp(-n))), lon));
-  this.render$0();
 },
  onDragEnd$1: function(event$) {
+  this._viewport.set$cursor('default');
+  var t1 = new $.TileLayer_onDragEnd_createAnimationStep(this);
+  $.Point$offset(event$);
+  if (this._dragLast == null || this._dragLastTimestamp == null)
+    return;
+  var v = this._dragVelocity;
+  if (typeof v !== 'number')
+    return this.onDragEnd$1$bailout(1, t1, v);
+  for (var delay = 50; v > 0;) {
+    var next = $.Point$polar(v * 50, this._dragDirection);
+    v -= 0.3;
+    $.Timer_Timer(delay, t1.call$1(next));
+    delay += 50;
+  }
   this._dragStart = null;
   this._dragCenter = null;
-  this._viewport.set$cursor('default');
+},
+ onDragEnd$1$bailout: function(state0, t1, v) {
+  for (var delay = 50; $.gtB(v, 0);) {
+    var next = $.Point$polar($.mul(v, 50), this._dragDirection);
+    v = $.sub(v, 0.3);
+    $.Timer_Timer(delay, t1.call$1(next));
+    delay += 50;
+  }
+  this._dragStart = null;
+  this._dragCenter = null;
 },
  TileLayer$2: function(viewport, tilesource) {
   this._tilesource = tilesource == null ? $.TileSource$(256, 256, 'http://a.tile.openstreetmap.org/$zoom/$x/$y.png', 18) : tilesource;
@@ -2470,8 +2505,30 @@ $$.Point = {"":
       return $.Point$(t1, $.add(t3, dy));
   }
 },
+ distance$1: function(other) {
+  return $.sqrt($.pow($.sub(this.x, other.x), 2) + $.pow($.sub(this.y, other.y), 2));
+},
+ get$theta: function() {
+  var t1 = this.x;
+  if ($.eqB(t1, 0))
+    return $.gtB(this.y, 0) ? 1.5707963267948966 : -1.5707963267948966;
+  else {
+    var t2 = $.gtB(t1, 0);
+    var t3 = this.y;
+    if (t2)
+      return $.atan($.div(t3, t1));
+    else
+      return $.atan($.div(t3, t1)) + 3.141592653589793;
+  }
+},
  operator$eq$1: function(other) {
   return $.eqB(other.get$x(), this.x) && $.eqB(other.get$y(), this.y);
+},
+ operator$add$1: function(other) {
+  return $.Point$($.add(this.x, other.get$x()), $.add(this.y, other.get$y()));
+},
+ operator$sub$1: function(other) {
+  return $.Point$($.sub(this.x, other.get$x()), $.sub(this.y, other.get$y()));
 },
  is$Point: true
 };
@@ -4409,6 +4466,26 @@ $$.Viewport_onMouseMove_anon = {"":
 }
 };
 
+$$.TileLayer_onDragEnd_createAnimationStep = {"":
+ ["this_0"],
+ "super": "Closure",
+ call$1: function(delta) {
+  return new $.TileLayer_onDragEnd_createAnimationStep_anon(this.this_0, delta);
+}
+};
+
+$$.TileLayer_onDragEnd_createAnimationStep_anon = {"":
+ ["this_2", "delta_1"],
+ "super": "Closure",
+ call$1: function(timer) {
+  var t1 = this.this_2;
+  var t2 = t1.get$_viewport().get$center();
+  var t3 = this.delta_1;
+  t1._pan$3(t2, $.neg(t3.get$x()), $.neg(t3.get$y()));
+  t1.render$0();
+}
+};
+
 $$.startRootIsolate_anon = {"":
  [],
  "super": "Closure",
@@ -4965,6 +5042,13 @@ $._convertNativeToDart_IDBAny = function(object) {
   return $._convertNativeToDart_AcceptStructuredClone(object, false);
 };
 
+$.sort = function(receiver, compare) {
+  if (!$.isJsArray(receiver))
+    return receiver.sort$1(compare);
+  $.checkMutable(receiver, 'sort');
+  $.DualPivotQuicksort_sort(receiver, compare);
+};
+
 $.typeNameInOpera = function(obj) {
   var name$ = $.constructorNameFallback(obj);
   if (name$ === 'Window')
@@ -4982,15 +5066,16 @@ $.callTypeCast = function(value, property) {
   $.propertyTypeCastError(value, property);
 };
 
-$.sort = function(receiver, compare) {
-  if (!$.isJsArray(receiver))
-    return receiver.sort$1(compare);
-  $.checkMutable(receiver, 'sort');
-  $.DualPivotQuicksort_sort(receiver, compare);
+$.DualPivotQuicksort_sort = function(a, compare) {
+  $.DualPivotQuicksort__doSort(a, 0, a.length - 1, compare);
 };
 
 $._SpeechRecognitionEventsImpl$ = function(_ptr) {
   return new $._SpeechRecognitionEventsImpl(_ptr);
+};
+
+$.Point$polar = function(r, theta) {
+  return new $.Point($.toInt($.mul(r, $.cos(theta))), $.toInt($.mul(r, $.sin(theta))));
 };
 
 $._SVGElementInstanceEventsImpl$ = function(_ptr) {
@@ -5022,10 +5107,6 @@ $.add$1 = function(receiver, value) {
     return;
   }
   return receiver.add$1(value);
-};
-
-$.DualPivotQuicksort_sort = function(a, compare) {
-  $.DualPivotQuicksort__doSort(a, 0, a.length - 1, compare);
 };
 
 $.Primitives_getMinutes = function(receiver) {
@@ -5520,7 +5601,7 @@ $.min = function(a, b) {
 };
 
 $.TileLayer$ = function(viewport, tilesource) {
-  var t1 = new $.TileLayer(null, [], null, null, null, viewport);
+  var t1 = new $.TileLayer(null, [], null, null, null, null, 0, null, null, viewport);
   t1.Layer$1(viewport);
   t1.TileLayer$2(viewport, tilesource);
   return t1;
@@ -5689,6 +5770,10 @@ $.startRootIsolate = function(entry) {
 
 $._AudioContextEventsImpl$ = function(_ptr) {
   return new $._AudioContextEventsImpl(_ptr);
+};
+
+$.Point$clone = function(other) {
+  return new $.Point(other.x, other.y);
 };
 
 $._isJavaScriptSimpleObject = function(value) {
@@ -6897,6 +6982,10 @@ $.FeedbackRectangle$ = function(_layer, x, y, width, height) {
   return new $.FeedbackRectangle(false, _layer, x, y, width, height);
 };
 
+$.sin = function(x) {
+  return Math.sin($.checkNum(x));
+};
+
 $.DualPivotQuicksort__doSort = function(a, left, right, compare) {
   if (right - left <= 32)
     $.DualPivotQuicksort_insertionSort_(a, left, right, compare);
@@ -7978,6 +8067,10 @@ _ConsoleImpl.error$1 = function(arg) {
   return this.error(arg);
 };
 _ConsoleImpl.get$error = function() { return new $.BoundClosure0(this, 'error$1'); };
+_ConsoleImpl.timeStamp$1 = function(arg) {
+  return this.timeStamp(arg);
+};
+_ConsoleImpl.get$timeStamp = function() { return new $.BoundClosure0(this, 'timeStamp$1'); };
 $.$defineNativeClass('HTMLContentElement', [], {
  is$Element: function() { return true; }
 });
@@ -8391,7 +8484,7 @@ $.$defineNativeClass('EventException', [], {
 }
 });
 
-$.$defineNativeClass('Event', [], {
+$.$defineNativeClass('Event', ["timeStamp?"], {
  get$target: function() {
   return $._convertNativeToDart_EventTarget(this.get$_target());
 },
