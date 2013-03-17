@@ -1,0 +1,114 @@
+@import url(http://fonts.googleapis.com/css?family=Signika+Negative:300,400,600,700);
+
+html, body {
+  margin: 0;
+  padding: 0;
+  font-family: 'Signika Negative', sans-serif;
+}
+
+#left-header {
+  float: left;
+  width: 45%;
+}
+
+#right-header {
+  float: right;
+  width: 45%;
+  
+}
+#page-title {
+  margin: 0;
+  padding: 0;
+  font-size: 18pt;
+  font-weight: bold;
+  margin-left: 1cm;
+}
+
+nav {
+  color: white;
+  padding: 5px;
+}
+
+ul.nav {
+  list-style-type: none;
+  margin: auto;  
+}
+
+li.nav {
+  float: left;
+  margin-left: 5pt;
+  margin-right: 5pt;
+  width: 1.5cm;
+  padding: 2pt;
+  border-style: groove;
+  border-width: 3pt;
+  border-color: darkGray;
+  text-align: center;
+  -webkit-border-radius: 5px;
+	-moz-border-radius: 5px;
+	border-radius: 5px;
+}
+
+a.nav, a.nav:visited {
+  color: white;
+  text-decoration: none;
+}
+
+a.nav:hover {
+  text-decoration: underline;
+} 
+
+header {
+  width: 100%;
+  height: 50pt;
+  background: black; 
+}
+section {
+  margin: auto;
+  width: 600px;
+}
+#container {
+  text-align: center;
+}
+
+canvas#viewport {
+  top: 0;
+  left: 0;
+  padding: 0;
+  margin: 0;
+  margin-top: 20px;
+  width: 500px;
+  height: 500px;  
+  
+  -webkit-box-shadow: 7px 5px 17px rgba(54, 50, 50, 0.46);
+	-moz-box-shadow:    7px 5px 17px rgba(54, 50, 50, 0.46);
+	box-shadow:         7px 5px 17px rgba(54, 50, 50, 0.46);
+	
+	border-style: solid;
+	border-width: 1pt;
+	border-color: rgb(54,50,50);
+}
+
+
+#attribuition {
+  font-size: 8pt;
+}
+
+.actions, .description {
+  font-size: 12pt;
+}
+
+.action {
+ font-weight: bold;
+} 
+
+a {
+  color:#E0741B;
+}
+a, a:visited {
+  text-decoration: none;
+}
+a:hover {
+  text-decoration: underline;
+}
+
